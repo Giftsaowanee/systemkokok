@@ -1,0 +1,76 @@
+CREATE TABLE tb_Staff (
+  user_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  phone VARCHAR(15),
+  email VARCHAR(100),
+  password VARCHAR(255) NOT NULL
+);
+CREATE TABLE tb_President (
+  user_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  phone VARCHAR(15),
+  email VARCHAR(100) UNIQUE,
+  password VARCHAR(255) NOT NULL
+);
+CREATE TABLE tb_Administrator (
+  user_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  phone VARCHAR(15),
+  email VARCHAR(100) UNIQUE,
+  password VARCHAR(255) NOT NULL
+);
+CREATE TABLE tb_Member_Management (
+  member_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  phone VARCHAR(15),
+  address TEXT,
+  funds_amount DECIMAL(12,2),
+  Share_value DECIMAL(12,2),
+  occupation VARCHAR(255)
+);
+CREATE TABLE tb_Production_Management (
+  production_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  member_name VARCHAR(100) NOT NULL,
+  staff_name VARCHAR(100) NOT NULL,
+  quantity INT(11),
+  unit VARCHAR(50),
+  price VARCHAR(100)
+);
+CREATE TABLE tb_Sales_Management (
+  sales_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  product INT(11),         -- FK ไปยังตารางสินค้า
+  category INT(11),        -- FK ไปยังตารางหมวดหมู่
+  quantity INT(11)
+);
+CREATE TABLE tb_Accounting_Management (
+  finance_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  type VARCHAR(50),
+  income VARCHAR(50),
+  expense VARCHAR(50),
+  amount DECIMAL(10,2),
+  description TEXT,
+  transaction_date DATE,
+  profit DECIMAL(10,2),
+  dividend DECIMAL(10,2),
+  share DECIMAL(10,2) -- หากต้องการ FK ให้ระบุรายละเอียดตารางหุ้น
+);
+CREATE TABLE tb_Dividend (
+  dividend_id INT(10) AUTO_INCREMENT PRIMARY KEY,
+  member_id INT(10), -- FK ไปยังตารางสมาชิก
+  share_amount DECIMAL(10,2),
+  payment DATE,
+  FOREIGN KEY (member_id) REFERENCES tb_Member_Management(member_id)
+);
+CREATE TABLE tb_Share (
+  share_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  member_id INT(11), -- FK ไปยังตารางสมาชิก
+  share_amount INT(11),
+  share_value DECIMAL(10,2),
+  FOREIGN KEY (member_id) REFERENCES tb_Member_Management(member_id)
+);
+CREATE TABLE tb_Report_Management (
+  report_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(100) NOT NULL,
+  content TEXT,
+  created_date DATE
+);

@@ -1,0 +1,615 @@
+{
+  "directors": [
+    {
+      "id": "7fc3",
+      "name": "นางสาวมะลิวรรณ ทองจำปา",
+      "email": "admin@kokko.com",
+      "phone": "0986321254",
+      "position": "แอดมิน",
+      "department": "",
+      "role": "admin",
+      "isActive": true,
+      "joinDate": "",
+      "address": "47/2 ตำบลโคกก่อ อำเภอเมือง จังหวัดมหาสารคาม",
+      "households": 3,
+      "income": 150000
+    },
+    {
+      "id": "41f4",
+      "name": "นายนนน รามาอิน",
+      "email": "president@kokko.com",
+      "phone": "0856321441",
+      "position": "เจ้าหน้าที่",
+      "department": "",
+      "role": "staff",
+      "isActive": true,
+      "joinDate": "",
+      "address": "12/1 ต.โคกก่อ อ.เมือง จ.มหาสารคาม",
+      "households": 2,
+      "income": 120000
+    },
+    {
+      "id": "b7a9",
+      "name": "นางสาวบุษบา เสี่ยงตรีน",
+      "email": "prdgdcesident@kokko.com",
+      "phone": "0983165412",
+      "position": "เจ้าหน้าที่",
+      "department": "",
+      "role": "staff",
+      "isActive": true,
+      "joinDate": "",
+      "address": "43/9 44130",
+      "households": 3,
+      "income": 25000
+    }
+  ],
+  "sales": [
+    {
+      "id": "1",
+      "orderNumber": "ORD-001",
+      "customerName": "บริษัท สวนผลไม้โคกก่อ จำกัด",
+      "customerEmail": "contact@kokkofruits.com",
+      "products": [
+        "สมุนไพร"
+      ],
+      "totalAmount": 1500,
+      "status": "delivered",
+      "orderDate": "2025-10-10",
+      "deliveryDate": "2025-10-15",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending"
+    },
+    {
+      "id": "6913",
+      "orderNumber": "ORD-002",
+      "customerName": "นางมะลิ พวงจำปา",
+      "customerEmail": "shdsoddkdk@gmail.com",
+      "products": [
+        "สมุนไพรแปรรูป"
+      ],
+      "totalAmount": 105,
+      "status": "delivered",
+      "orderDate": "2025-10-11",
+      "deliveryDate": "2025-10-11",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending"
+    },
+    {
+      "id": "6862",
+      "orderNumber": "ORD-003",
+      "customerName": "บริษัท ตัวอย่าง จำกัด",
+      "customerEmail": "sample@company.com",
+      "products": [
+        "สมุนไพรสด"
+      ],
+      "totalAmount": 1000,
+      "status": "delivered",
+      "orderDate": "2025-10-13",
+      "deliveryDate": "",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending"
+    },
+    {
+      "id": "7dc4",
+      "orderNumber": "ORD-004",
+      "customerName": "นายจันดา ราดา",
+      "customerEmail": "presifieodenjckdodjvot@kokko.com",
+      "products": [
+        "สมุนไพรสด"
+      ],
+      "totalAmount": 1000,
+      "status": "pending",
+      "orderDate": "2025-10-13",
+      "deliveryDate": "",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending"
+    },
+    {
+      "id": "baf2",
+      "orderNumber": "ORD-005",
+      "customerName": "นายวัน ทองสอง",
+      "customerEmail": "predyijvhsident@kokko.com",
+      "products": [
+        "สมุนไพรสด"
+      ],
+      "totalAmount": 1000,
+      "status": "pending",
+      "orderDate": "2025-10-13",
+      "deliveryDate": "",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending"
+    },
+    {
+      "id": "a068",
+      "orderNumber": "ORD-1760503217021",
+      "customerName": "นาางสาวเสาวณีย์ บุริวัน",
+      "customerEmail": "giftsgodgood@gmail.com",
+      "products": [
+        "สมุนไพรสด"
+      ],
+      "totalAmount": 1000,
+      "status": "delivered",
+      "orderDate": "2025-10-15",
+      "deliveryDate": "",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending"
+    },
+    {
+      "id": "38f7",
+      "orderNumber": "ORD-360",
+      "customerName": "นาางสาวเสาวณีย์ บุริวัน",
+      "customerEmail": "giftsgodgood@gmail.com",
+      "products": [
+        "อัญชัน"
+      ],
+      "totalAmount": 30,
+      "status": "delivered",
+      "orderDate": "2025-10-15",
+      "deliveryDate": "",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending"
+    },
+    {
+      "id": "8dd8",
+      "orderNumber": "ORD-1760503447661",
+      "customerName": "นาางสาวเสาวณีย์ บุริวัน",
+      "customerEmail": "giftsgodgood@gmail.com",
+      "products": [
+        "สมุนไพรสด"
+      ],
+      "totalAmount": 1000,
+      "status": "pending",
+      "orderDate": "2025-10-15",
+      "deliveryDate": "",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending"
+    },
+    {
+      "id": "31ea",
+      "orderNumber": "ORD-1760503882620",
+      "customerName": "บริษัท สวนผลไม้โคกก่อ จำกัด",
+      "customerEmail": "contact@kokkofruits.com",
+      "products": [
+        "สมุนไพรสด"
+      ],
+      "totalAmount": 1000,
+      "status": "delivered",
+      "orderDate": "2025-10-15",
+      "deliveryDate": "",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending"
+    },
+    {
+      "id": "7ea9",
+      "orderNumber": "ORD-1760503937551",
+      "customerName": "บริษัท ตัวอย่าง จำกัด",
+      "customerEmail": "sample@company.com",
+      "products": [
+        "สมุนไพรสด"
+      ],
+      "totalAmount": 1000,
+      "status": "delivered",
+      "orderDate": "2025-10-15",
+      "deliveryDate": "",
+      "paymentMethod": "cash",
+      "paymentStatus": "pending"
+    },
+    {
+      "id": "e404",
+      "customerName": "นางสาวเสาวณีย์ บุริวัน",
+      "products": [
+        {
+          "name": "แชมพูสระผม",
+          "quantity": 2,
+          "price": 159
+        }
+      ],
+      "totalAmount": 318,
+      "orderDate": "2025-10-16",
+      "paymentMethod": "cash",
+      "paymentStatus": "completed"
+    },
+    {
+      "id": "9aa7",
+      "customerName": "นางสาวเสาวณีย์ บุริวัน",
+      "products": [
+        {
+          "name": "แชมพูสระผม",
+          "quantity": 2,
+          "price": 159
+        }
+      ],
+      "totalAmount": 318,
+      "orderDate": "2025-10-16",
+      "paymentMethod": "cash",
+      "paymentStatus": "completed"
+    },
+    {
+      "id": "a562",
+      "customerName": "นางสาวเสาวณีย์ บุริวัน",
+      "products": [
+        {
+          "name": "แชมพูสระผม",
+          "quantity": 1,
+          "price": 159
+        }
+      ],
+      "totalAmount": 159,
+      "orderDate": "2025-10-16",
+      "paymentMethod": "cash",
+      "paymentStatus": "completed"
+    },
+    {
+      "id": "d570",
+      "customerName": "บริษัท สวนผลไม้โคกก่อ จำกัด",
+      "products": [
+        {
+          "name": "สบู่ล้างหน้า",
+          "quantity": 1,
+          "price": 35
+        }
+      ],
+      "totalAmount": 35,
+      "orderDate": "2025-10-16",
+      "paymentMethod": "cash",
+      "paymentStatus": "completed"
+    },
+    {
+      "id": "75e9",
+      "customerName": "นางสาวเสาวณีย์ บุริวัน",
+      "products": [
+        {
+          "name": "สบู่ล้างหน้า",
+          "quantity": 2,
+          "price": 35
+        }
+      ],
+      "totalAmount": 70,
+      "orderDate": "2025-10-16",
+      "paymentMethod": "cash",
+      "paymentStatus": "completed"
+    },
+    {
+      "id": "21b3",
+      "customerName": "นายวัน ทองสอง",
+      "products": [
+        {
+          "name": "ฟ้าทะลายโจร",
+          "quantity": 1,
+          "price": 150
+        }
+      ],
+      "totalAmount": 150,
+      "orderDate": "2025-10-16",
+      "paymentMethod": "cash",
+      "paymentStatus": "completed"
+    },
+    {
+      "id": "09cd",
+      "customerName": "นางสาวเสาวณีย์ บุริวัน",
+      "products": [
+        {
+          "name": "ฟ้าทะลายโจร",
+          "quantity": 1,
+          "price": 150
+        }
+      ],
+      "totalAmount": 150,
+      "orderDate": "2025-10-16",
+      "paymentMethod": "cash",
+      "paymentStatus": "completed"
+    }
+  ],
+  "customers": [
+    {
+      "name": "บริษัท สวนผลไม้โคกก่อ จำกัด",
+      "email": "contact@kokkofruits.com",
+      "phone": "081-234-5678",
+      "address": "123 หมู่ 2 ตำบลโคกก่อ อำเภอเมือง จังหวัดลพบุรี 15000",
+      "totalOrders": 20,
+      "totalSpent": 1250,
+      "product": "สมุนไพรสด",
+      "id": "1"
+    },
+    {
+      "name": "บริษัท ตัวอย่าง จำกัด",
+      "email": "sample@company.com",
+      "phone": "089-999-9999",
+      "address": "456 หมู่ 5 ตำบลตัวอย่าง อำเภอเมือง จังหวัดขอนแก่น 40000",
+      "totalOrders": 10,
+      "totalSpent": 1000,
+      "product": "สมุนไพรสด",
+      "id": "3"
+    },
+    {
+      "name": "นายจันดา ราดา",
+      "email": "presifieodenjckdodjvot@kokko.com",
+      "phone": "0974523614",
+      "address": "45/9 ซอยนครสวรรค์ อำเภอเมือง จังหวัดมหาสารคาม 44000",
+      "totalOrders": 30,
+      "totalSpent": 100,
+      "product": "แชมพูสระผม",
+      "id": "d7f1"
+    },
+    {
+      "id": "83cc",
+      "name": "นายวัน ทองสอง",
+      "email": "predyijvhsident@kokko.com",
+      "phone": "0645312978",
+      "address": "18/39 44000",
+      "totalOrders": 1,
+      "totalSpent": 159,
+      "product": "แชมพูสระผม"
+    },
+    {
+      "name": "นางสาวเสาวณีย์ บุริวัน",
+      "email": "giftsgodgood@gmail.com",
+      "phone": "0896311452",
+      "address": "44/74 44000",
+      "totalOrders": 1,
+      "totalSpent": 30,
+      "product": "อัญชัน",
+      "id": "245b"
+    }
+  ],
+  "members": [
+    {
+      "id": "1",
+      "name": "นายสมปอง ใจดี",
+      "shares": 10,
+      "role": "เกษตกร",
+      "address": "99 หมู่ 3 ต.โคกก่อ อ.เมือง จ.มหาสารคาม",
+      "households": 3,
+      "farmingArea": 100,
+      "income": 136000,
+      "productionVolume": 89,
+      "phone": "0896321454",
+      "email": "presivjcjjvgfgfdent@kokko.com",
+      "birthDate": "1987-02-19",
+      "career": "เกษตร"
+    },
+    {
+      "id": "ef29",
+      "name": "นายวัน ทองสอง",
+      "address": "44/77 44000",
+      "households": 3,
+      "farmingArea": 121,
+      "income": 350000,
+      "productionVolume": 152,
+      "role": "เกษตรกร",
+      "shares": 2,
+      "phone": "0879632145",
+      "email": "presi125dent@kokko.com",
+      "birthDate": "1990-06-12",
+      "career": "แม่ค้า"
+    },
+    {
+      "id": "7ee7",
+      "name": "นางสาวพรรณนิกา จะจำ",
+      "address": "43/9 44130",
+      "households": 3,
+      "farmingArea": 89,
+      "income": 150000,
+      "productionVolume": 67,
+      "role": "เกษตรกร",
+      "shares": 5,
+      "phone": "0876312549",
+      "email": "stslfekdpdaff@kokko.com",
+      "birthDate": "1984-06-06",
+      "career": "เกษตร"
+    },
+    {
+      "id": "01da",
+      "name": "นายสอง วันวัน",
+      "address": "13/8 ต.โคกก่อ อ.เมือง จ.มหาสารคาม",
+      "households": 3,
+      "farmingArea": 100,
+      "income": 321000,
+      "productionVolume": 120,
+      "role": "เกษตรกร",
+      "shares": 3,
+      "phone": "0654132987",
+      "email": "presrtyfjjident@kokko.com",
+      "birthDate": "1991-05-13",
+      "career": "ครู"
+    },
+    {
+      "id": "ca17",
+      "name": "นางอัญมณี สิริมาลา",
+      "address": "11/8 ต.โคกก่อ อ.เมือง จ.มหาสารคาม",
+      "households": 4,
+      "farmingArea": 120,
+      "income": 354000,
+      "productionVolume": 100,
+      "role": "เกษตรกร",
+      "shares": 5,
+      "phone": "0954632125",
+      "email": "prdewsffdsident@kokko.com",
+      "birthDate": "1994-02-02",
+      "career": "เกษตร"
+    },
+    {
+      "id": "922e",
+      "name": "นางชเนตตี อินทรสิทธิ์",
+      "address": "19/4 ต.โคกก่อ อ.เมือง จ.มหาสารคาม",
+      "households": 3,
+      "farmingArea": 100,
+      "income": 500001,
+      "productionVolume": 150,
+      "role": "แม่ค้า",
+      "shares": 3,
+      "phone": "0986321457",
+      "email": "giftsgodgood@gmail.com",
+      "birthDate": "1987-06-15",
+      "career": "แม่ค้า"
+    },
+    {
+      "id": "8ce5",
+      "name": "นาางสาวเสาวณีย์ บุริวัน",
+      "address": "14/1 44000",
+      "households": 3,
+      "farmingArea": 100,
+      "income": 50100,
+      "productionVolume": 100,
+      "role": "เกษตรกร",
+      "shares": 20,
+      "phone": "0963254187",
+      "email": "giftsgodgood@gmail.com",
+      "birthDate": "2004-01-31",
+      "career": "เกษตร"
+    },
+    {
+      "id": "0101",
+      "name": "ฟ",
+      "address": "44/77 44001",
+      "career": "เด",
+      "shares": 2,
+      "phone": "0983165412"
+    },
+    {
+      "id": "ce2a",
+      "name": "มา",
+      "address": "43/9 44130",
+      "career": "อา",
+      "shares": 2,
+      "phone": "0232155898"
+    }
+  ],
+  "products": [
+    {
+      "name": "ฟ้าทะลายโจร",
+      "category": "สมุนไพรอบแห้ง",
+      "stock": 10,
+      "unit": "กิโลกรัม",
+      "pricePerUnit": 250,
+      "dateAdded": "2025-01-16",
+      "year": "2025",
+      "variety": "",
+      "sellerName": "นายวัน ทองสอง",
+      "buyerStaff": "นางบุษบา เสี่ยงตรีน",
+      "id": "1"
+    },
+    {
+      "name": "แชมพูสระผม",
+      "category": "สมุนไพรสำหรับเครื่องสำอาง",
+      "stock": 90,
+      "unit": "ขวด",
+      "pricePerUnit": 159,
+      "dateAdded": "2025-10-10",
+      "year": "2025",
+      "variety": "",
+      "sellerName": "นางสาวพรรณนิกา จะจำ",
+      "buyerStaff": "นางบุษบา เสี่ยงตรีน",
+      "id": "40c2"
+    },
+    {
+      "name": "สบู่ล้างหน้า",
+      "category": "สมุนไพรสำหรับเครื่องสำอาง",
+      "stock": 22,
+      "unit": "ก้อน",
+      "pricePerUnit": 35,
+      "dateAdded": "2025-10-11",
+      "year": "2025",
+      "variety": "",
+      "sellerName": "นางสาวเสาวณีย์ บุริวัน",
+      "buyerStaff": "นางบุษบา เสี่ยงตรีน",
+      "id": "7c20"
+    },
+    {
+      "name": "อัญชัน",
+      "category": "สมุนไพรอบแห้ง",
+      "stock": 5,
+      "unit": "กิโลกรัม",
+      "pricePerUnit": 600,
+      "dateAdded": "2025-10-15",
+      "expiryDate": "",
+      "status": "available",
+      "year": "2025",
+      "variety": "",
+      "sellerName": "นางอัญมณี สิริมาลา",
+      "buyerStaff": "นางบุษบา เสี่ยงตรีน",
+      "id": "bf81"
+    },
+    {
+      "name": "มะนาว",
+      "category": "สมุนไพรสำหรับอาหาร",
+      "stock": 10,
+      "unit": "กิโลกรัม",
+      "pricePerUnit": 35,
+      "dateAdded": "2025-10-15",
+      "expiryDate": "",
+      "status": "available",
+      "year": "2025",
+      "variety": "",
+      "sellerName": "นางชเนตตี อิทรสิทธิ์",
+      "buyerStaff": "นางบุษบา เสี่ยงตรีน",
+      "id": "29ac"
+    },
+    {
+      "name": "อัญชัน",
+      "category": "สมุนไพรอบแห้ง",
+      "stock": 10,
+      "unit": "กิโลกรัม",
+      "pricePerUnit": 600,
+      "dateAdded": "2025-05-05",
+      "expiryDate": "",
+      "status": "available",
+      "year": "2025",
+      "variety": "",
+      "sellerName": "นายสมปอง ใจดี",
+      "buyerStaff": "นางบุษบา เสี่ยงตรีน",
+      "id": "d670"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "1",
+      "date": "2025-09-17",
+      "type": "dividend",
+      "description": "จ่ายปันผลรอบปี",
+      "amount": 51000,
+      "reference": "04",
+      "paymentMethod": "cash",
+      "status": "completed"
+    },
+    {
+      "id": "6ead",
+      "date": "2025-10-09",
+      "description": "ขายสบู่ล้างหน้า",
+      "category": "สมุนไพรแปรรูป",
+      "amount": 70,
+      "reference": "01",
+      "type": "income",
+      "paymentMethod": "cash"
+    },
+    {
+      "id": "d3fa",
+      "date": "2025-10-06",
+      "description": "ค่าน้ำ ",
+      "category": "อื่นๆ",
+      "amount": 246,
+      "reference": "02",
+      "type": "expense",
+      "paymentMethod": "cash",
+      "unit": ""
+    },
+    {
+      "id": "f72e",
+      "date": "2025-09-04",
+      "description": "ขายแชมพู",
+      "category": "สมุนไพรแปรรูป",
+      "amount": 259,
+      "reference": "03",
+      "type": "income",
+      "paymentMethod": "cash",
+      "unit": ""
+    },
+    {
+      "id": "1",
+      "date": "2025-01-15",
+      "type": "dividend",
+      "description": "จ่ายปันผลรอบปี",
+      "amount": 5000
+    }
+  ]
+}
