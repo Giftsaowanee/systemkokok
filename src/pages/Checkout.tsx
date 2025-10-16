@@ -38,36 +38,58 @@ const Checkout = () => {
   const receiptRef = useRef<HTMLDivElement>(null);
 
   const handleConfirmOrder = async () => {
-    for (const item of cart) {
-      const res = await fetch(`http://localhost:3001/products/${item.id}`);
-      const prod = await res.json();
-      const newStock = prod.stock - item.quantity;
-      await fetch(`http://localhost:3001/products/${item.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stock: newStock < 0 ? 0 : newStock })
-      });
-    }
-    await fetch('http://localhost:3001/sales', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      console.log('Confirming order with cart:', cart);
+      
+      // บันทึกการขายผ่าน API ที่จะอัปเดตสต็อกอัตโนมัติ
+      const orderData = {
         customerName: customerName,
         products: cart.map(item => ({
           name: item.name,
+          category: item.category || 'ไม่ระบุ',
           quantity: item.quantity,
-          price: item.pricePerUnit
+          price: item.pricePerUnit,
+          unit: item.unit || 'ชิ้น'
         })),
-        totalAmount: cart.reduce((sum, item) => sum + item.pricePerUnit * item.quantity, 0),
+        totalAmount: totalAmount,
         orderDate: new Date().toISOString().slice(0, 10),
         paymentMethod,
         paymentStatus: 'completed'
-      })
-    });
-    setOrderedItems(cart);
-    setCart([]); // เคลียร์ตะกร้า
-    setShowOrderDialog(true); // แสดงสรุป
-    navigate('/sales'); // เด้งกลับหน้าการขาย
+      };
+      
+      console.log('Sending order data:', orderData);
+      
+      const response = await fetch('http://localhost:3001/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to process order: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Order response:', result);
+      
+      // แสดงข้อความเตือนถ้ามีสินค้าหมด
+      if (result.outOfStockProducts && result.outOfStockProducts.length > 0) {
+        alert(`เรียบร้อยแล้ว! แต่สินค้าเหล่านี้หมดแล้ว: ${result.outOfStockProducts.join(', ')}`);
+      }
+      
+      // เก็บรายการที่สั่งซื้อ
+      setOrderedItems([...cart]);
+      setCart([]); // เคลียร์ตะกร้า
+      setCustomerName(''); // เคลียร์ชื่อลูกค้า
+      setShowOrderDialog(true); // แสดงสรุป
+      
+      // แสดงข้อความสำเร็จ
+      alert(result.message || 'สั่งซื้อเรียบร้อยแล้ว!');
+      
+    } catch (error) {
+      console.error('Error confirming order:', error);
+      alert('เกิดข้อผิดพลาดในการสั่งซื้อ: ' + error.message);
+    }
   };
 
   // ฟังก์ชันพิมพ์ใบเสร็จ

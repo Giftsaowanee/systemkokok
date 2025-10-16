@@ -14,7 +14,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [directors, setDirectors] = useState<{ email: string; role: string }[]>([]);
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,29 +30,32 @@ const Login = () => {
     setError('');
 
     try {
-      const user = await login(email, password);
-      if (user) {
-        // ตรวจสอบบทบาทสำหรับหน้าประธาน
-        if (window.location.pathname === '/president') {
-          // ตรวจสอบจาก directors ว่า email นี้เป็นประธานจริง
-          const isPresident = directors.some(d => d.email === email && d.role === 'president');
-          if (isPresident) {
-            navigate('/president-dashboard');
-          } else {
-            setError('เฉพาะประธานเท่านั้นที่เข้าสู่ระบบนี้ได้');
-          }
+      const success = await login(email, password);
+      if (success) {
+        // หลัง login สำเร็จให้ตรวจสอบ role จาก email ที่ login
+        // เนื่องจาก user state ยังไม่อัปเดตทันที
+        let userRole = 'staff'; // default
+        
+        if (email === 'admin@kokko.com') {
+          userRole = 'admin';
+        } else if (email === 'president@kokko.com') {
+          userRole = 'president';  
+        } else if (email === 'staff@kokko.com') {
+          userRole = 'staff';
         }
-        // ตัวอย่าง: ถ้าอยู่หน้า /admin
-        else if (window.location.pathname === '/admin') {
-          if (user.role === 'president' || user.role === 'staff') {
-            navigate('/dashboard');
-          } else {
-            setError('เฉพาะประธานหรือเจ้าหน้าที่เท่านั้นที่เข้าสู่ระบบผู้ดูแลได้');
-          }
-        }
-        // หน้าอื่นๆ
-        else {
-          navigate('/dashboard');
+        
+        switch (userRole) {
+          case 'admin':
+            navigate('/dashboard'); // ผู้ดูแลระบบไปหน้า Dashboard
+            break;
+          case 'president':
+            navigate('/members'); // ประธานกลุ่มวิสาหกิจไปหน้าจัดการสมาชิก
+            break;
+          case 'staff':
+            navigate('/customers'); // เจ้าหน้าที่วิสาหกิจไปหน้าจัดการลูกค้า
+            break;
+          default:
+            navigate('/dashboard'); // default ไปหน้า Dashboard
         }
       } else {
         setError('อีเมลหรือรหัสผ่านไม่ถูกต้อง');

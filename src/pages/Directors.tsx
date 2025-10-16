@@ -8,69 +8,197 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { Users, Plus, Search, Edit, Trash2, UserCheck, Printer } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Textarea } from '@/components/ui/textarea';
+import { Users, Plus, Search, Edit, Trash2, UserCheck } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
-interface Director {
-  id: string;
-  name: string;
+interface UserManagement {
+  user_id: number;
+  full_name: string;
   email: string;
   phone: string;
   position: string;
-  department: string;
-  role: 'admin' | 'president' | 'staff';
-  isActive: boolean;
-  joinDate: string;
   address: string;
-  households: number;
+  household_members: number;
   income: number;
+  role: 'เจ้าหน้าที่' | 'ประธาน';
+  status: 'ใช้งาน' | 'ระงับ';
+  created_date: string;
+  updated_date?: string;
 }
 
 const Directors = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [directors, setDirectors] = useState<Director[]>([]);
+  const [users, setUsers] = useState<UserManagement[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingDirector, setEditingDirector] = useState<Director | null>(null);
-  const [form, setForm] = useState<Director>({
-    id: '',
-    name: '',
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserManagement | null>(null);
+  const [newUser, setNewUser] = useState<Partial<UserManagement>>({
+    full_name: '',
     email: '',
     phone: '',
     position: '',
-    department: '',
-    role: 'staff',
-    isActive: true,
-    joinDate: '',
     address: '',
-    households: 0,
-    income: 0
+    household_members: 0,
+    income: 0,
+    role: 'เจ้าหน้าที่',
+    status: 'ใช้งาน'
   });
-  const [multiForm, setMultiForm] = useState<Director[]>([
-    {
-      id: '',
-      name: '',
-      email: '',
-      phone: '',
-      position: '',
-      department: '',
-      role: 'staff',
-      isActive: true,
-      joinDate: '',
-      address: '',
-      households: 0,
-      income: 0
-    }
-  ]);
-  const navigate = useNavigate();
 
   useEffect(() => {
-    fetch('http://localhost:3001/directors')
-      .then(res => res.json())
-      .then(data => setDirectors(data));
+    fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/users');
+      if (!res.ok) throw new Error('Failed to fetch users');
+      const data = await res.json();
+      setUsers(data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถดึงข้อมูลผู้ใช้ได้",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAddUser = async () => {
+    if (!newUser.full_name || !newUser.email) {
+      toast({
+        title: "กรุณากรอกข้อมูลให้ครบ",
+        description: "กรุณากรอกชื่อ-นามสกุล และอีเมล",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch('http://localhost:3001/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to add user');
+      }
+
+      await fetchUsers();
+      setNewUser({
+        full_name: '',
+        email: '',
+        phone: '',
+        position: '',
+        address: '',
+        household_members: 0,
+        income: 0,
+        role: 'เจ้าหน้าที่',
+        status: 'ใช้งาน'
+      });
+      setShowAddDialog(false);
+
+      toast({
+        title: "บันทึกสำเร็จ",
+        description: "เพิ่มข้อมูลผู้ใช้เรียบร้อยแล้ว"
+      });
+    } catch (error) {
+      console.error('Error adding user:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: error instanceof Error ? error.message : "ไม่สามารถเพิ่มข้อมูลได้",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditUser = (userData: UserManagement) => {
+    setEditingUser(userData);
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser?.full_name || !editingUser?.email) {
+      toast({
+        title: "กรุณากรอกข้อมูลให้ครบ",
+        description: "กรุณากรอกชื่อ-นามสกุล และอีเมล",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:3001/users/${editingUser.user_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: editingUser.full_name,
+          email: editingUser.email,
+          phone: editingUser.phone,
+          position: editingUser.position,
+          address: editingUser.address,
+          household_members: editingUser.household_members,
+          income: editingUser.income,
+          role: editingUser.role,
+          status: editingUser.status
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to update user');
+      }
+
+      await fetchUsers();
+      setEditingUser(null);
+      setShowEditDialog(false);
+
+      toast({
+        title: "บันทึกสำเร็จ",
+        description: "แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว"
+      });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: error instanceof Error ? error.message : "ไม่สามารถแก้ไขข้อมูลได้",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    if (!window.confirm('ต้องการลบข้อมูลผู้ใช้นี้ใช่หรือไม่?')) return;
+
+    try {
+      const res = await fetch(`http://localhost:3001/users/${userId}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to delete user');
+      }
+
+      await fetchUsers();
+
+      toast({
+        title: "ลบสำเร็จ",
+        description: "ลบข้อมูลผู้ใช้เรียบร้อยแล้ว"
+      });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: error instanceof Error ? error.message : "ไม่สามารถลบข้อมูลได้",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Only admins can access this page
   if (user?.role !== 'admin') {
@@ -82,234 +210,11 @@ const Directors = () => {
     );
   }
 
-  const filteredDirectors = directors.filter(director =>
-    director.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    director.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    director.position.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter(userData =>
+    userData.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    userData.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    userData.position.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handlePrint = () => {
-    const printDate = new Date().toLocaleString('th-TH');
-    const activeDirectors = directors.filter(d => d.isActive).length;
-    const adminDirectors = directors.filter(d => d.role === 'admin').length;
-    
-    let tableRows = '';
-    filteredDirectors.forEach((director, index) => {
-      const roleText = director.role === 'admin' ? 'ผู้ดูแลระบบ' : 
-                      director.role === 'president' ? 'ประธาน' : 'เจ้าหน้าที่';
-      const statusText = director.isActive ? 'ใช้งาน' : 'ระงับ';
-      const statusClass = director.isActive ? 'active' : 'inactive';
-      
-      tableRows += `
-        <tr>
-          <td>${index + 1}</td>
-          <td>${director.name}</td>
-          <td>${director.email}</td>
-          <td>${director.phone}</td>
-          <td>${director.position}</td>
-          <td>${director.address}</td>
-          <td>${director.households}</td>
-          <td>฿${director.income.toLocaleString()}</td>
-          <td>${roleText}</td>
-          <td class="${statusClass}">${statusText}</td>
-        </tr>
-      `;
-    });
-
-    const printContent = `
-      <html>
-        <head>
-          <title>รายงานข้อมูลกรรมการ</title>
-          <style>
-            body { font-family: 'Sarabun', sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .header h1 { color: #2563eb; margin-bottom: 5px; }
-            .stats { display: flex; justify-content: space-around; margin: 20px 0; padding: 15px; background: #f8f9fa; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            th { background-color: #2563eb; color: white; }
-            .active { color: #22c55e; font-weight: bold; }
-            .inactive { color: #ef4444; font-weight: bold; }
-            .print-date { text-align: right; margin-top: 20px; font-size: 12px; color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>รายงานข้อมูลกรรมการ</h1>
-            <p>กลุ่มวิสาหกิจชุมชน ตำบลโคกก่อ</p>
-          </div>
-          
-          <div class="stats">
-            <div><strong>กรรมการทั้งหมด:</strong> ${directors.length} คน</div>
-            <div><strong>กรรมการที่ใช้งาน:</strong> ${activeDirectors} คน</div>
-            <div><strong>ผู้ดูแลระบบ:</strong> ${adminDirectors} คน</div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>ลำดับ</th>
-                <th>ชื่อ-นามสกุล</th>
-                <th>อีเมล</th>
-                <th>โทรศัพท์</th>
-                <th>ตำแหน่ง</th>
-                <th>ที่อยู่</th>
-                <th>ครัวเรือน</th>
-                <th>รายได้</th>
-                <th>บทบาท</th>
-                <th>สถานะ</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tableRows}
-            </tbody>
-          </table>
-          
-          <div class="print-date">
-            พิมพ์เมื่อ: ${printDate}
-          </div>
-        </body>
-      </html>
-    `;
-
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-    }
-  };
-
-  const handleAddDirector = () => {
-    setEditingDirector(null);
-    setForm({
-      id: '',
-      name: '',
-      email: '',
-      phone: '',
-      position: '',
-      department: '',
-      role: 'staff',
-      isActive: true,
-      joinDate: '',
-      address: '',
-      households: 0,
-      income: 0
-    });
-    setIsDialogOpen(true);
-  };
-
-  // แก้ไขกรรมการ
-  const handleEditDirector = (director: Director) => {
-    setEditingDirector(director);
-    setForm({ ...director });
-    setIsDialogOpen(true);
-  };
-
-  // ลบกรรมการ
-  const handleDeleteDirector = async (director: Director) => {
-    if (director.role === 'admin') {
-      toast({
-        title: "ไม่สามารถลบผู้ดูแลระบบได้",
-        description: "ผู้ดูแลระบบไม่สามารถลบออกจากระบบได้",
-        variant: "destructive"
-      });
-      return;
-    }
-    const res = await fetch(`http://localhost:3001/directors/${director.id}`, {
-      method: 'DELETE'
-    });
-    if (res.ok) {
-      setDirectors(prev => prev.filter(d => d.id !== director.id));
-      toast({
-        title: "ลบข้อมูลสำเร็จ",
-        description: "กรรมการถูกลบออกจากระบบแล้ว"
-      });
-    }
-  };
-
-  const handleToggleStatus = (id: string) => {
-    setDirectors(prev => prev.map(d => 
-      d.id === id ? { ...d, isActive: !d.isActive } : d
-    ));
-    toast({
-      title: "อัพเดทสถานะสำเร็จ",
-      description: "สถานะกรรมการถูกอัพเดทแล้ว"
-    });
-  };
-
-  // เพิ่มกรรมการ
-  const handleSaveDirector = async () => {
-    if (!form.name || !form.email || !form.phone || !form.position) {
-      toast({
-        title: "กรอกข้อมูลไม่ครบ",
-        description: "กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน",
-        variant: "destructive"
-      });
-      return;
-    }
-    if (form.phone.length !== 10) {
-      toast({
-        title: "เบอร์โทรศัพท์ไม่ถูกต้อง",
-        description: "กรุณากรอกเบอร์โทรศัพท์ 10 หลัก",
-        variant: "destructive"
-      });
-      return;
-    }
-    if (editingDirector) {
-      // แก้ไขกรรมการเดิม
-      await fetch(`http://localhost:3001/directors/${editingDirector.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      });
-      toast({
-        title: "บันทึกสำเร็จ",
-        description: "แก้ไขข้อมูลกรรมการแล้ว"
-      });
-    } else {
-      // เพิ่มกรรมการใหม่
-      await fetch('http://localhost:3001/directors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-          position: form.position,
-          department: form.department,
-          role: form.role,
-          isActive: form.isActive,
-          joinDate: form.joinDate,
-          address: form.address,
-          households: form.households,
-          income: form.income
-        })
-      });
-      toast({
-        title: "บันทึกสำเร็จ",
-        description: "เพิ่มกรรมการใหม่แล้ว"
-      });
-    }
-    setIsDialogOpen(false);
-    setEditingDirector(null);
-    // โหลดข้อมูลใหม่มาแสดง
-    fetch('http://localhost:3001/directors')
-      .then(res => res.json())
-      .then(data => setDirectors(data));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // ...login logic...
-    if (loginSuccess) {
-      // เปลี่ยน path เป็นหน้าจัดการกรรมการ
-      navigate('/directors');
-    }
-    // ...existing code...
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -317,185 +222,187 @@ const Directors = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-foreground">จัดการกรรมการ</h1>
-          <p className="text-muted-foreground">จัดการข้อมูลกรรมการและคณะผู้บริหาร</p>
+          <p className="text-muted-foreground">
+            จัดการข้อมูลกรรมการและคณะผู้บริหาร
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline"
-            onClick={handlePrint}
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            พิมพ์รายงาน
-          </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleAddDirector} className="bg-primary hover:bg-primary/90">
-                <Plus className="mr-2 h-4 w-4" />
-                เพิ่มกรรมการ
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-  <DialogHeader>
-    <DialogTitle>
-      {editingDirector ? 'แก้ไขข้อมูลกรรมการ' : 'เพิ่มกรรมการใหม่'}
-    </DialogTitle>
-  </DialogHeader>
-  <div className="grid gap-4 py-4">
-    <div className="grid grid-cols-4 items-center gap-4">
-      <Label htmlFor="name" className="text-right">ชื่อ-นามสกุล</Label>
-      <Input
-        id="name"
-        placeholder="ชื่อ-นามสกุล"
-        className="col-span-3"
-        value={form.name}
-        onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-      />
-    </div>
-    <div className="grid grid-cols-4 items-center gap-4">
-      <Label htmlFor="email" className="text-right">อีเมล</Label>
-      <Input
-        id="email"
-        type="email"
-        placeholder="อีเมล"
-        className="col-span-3"
-        value={form.email}
-        onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-      />
-    </div>
-    <div className="grid grid-cols-4 items-center gap-4">
-      <Label htmlFor="phone" className="text-right">โทรศัพท์</Label>
-      <Input
-        id="phone"
-        placeholder="เบอร์โทรศัพท์"
-        className="col-span-3"
-        value={form.phone}
-        maxLength={10}
-        onChange={e => {
-          // รับเฉพาะตัวเลขและจำกัด 10 หลัก
-          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-          setForm(f => ({ ...f, phone: value }));
-        }}
-      />
-    </div>
-    <div className="grid grid-cols-4 items-center gap-4">
-      <Label htmlFor="position" className="text-right">ตำแหน่ง</Label>
-      <Input
-        id="position"
-        placeholder="ตำแหน่ง"
-        className="col-span-3"
-        value={form.position}
-        onChange={e => setForm(f => ({ ...f, position: e.target.value }))}
-      />
-    </div>
-    <div className="grid grid-cols-4 items-center gap-4">
-      <Label htmlFor="address" className="text-right">ที่อยู่</Label>
-      <Input
-        id="address"
-        placeholder="ที่อยู่"
-        className="col-span-3"
-        value={form.address}
-        onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-      />
-    </div>
-    <div className="grid grid-cols-4 items-center gap-4">
-      <Label htmlFor="households" className="text-right">สมาชิกครัวเรือน</Label>
-      <Input
-        id="households"
-        type="number"
-        placeholder="จำนวนสมาชิกครัวเรือน"
-        className="col-span-3"
-        value={form.households}
-        onChange={e => setForm(f => ({ ...f, households: Number(e.target.value) }))}
-      />
-    </div>
-    <div className="grid grid-cols-4 items-center gap-4">
-      <Label htmlFor="income" className="text-right">รายได้</Label>
-      <Input
-        id="income"
-        type="number"
-        placeholder="รายได้ต่อปี"
-        className="col-span-3"
-        value={form.income}
-        onChange={e => setForm(f => ({ ...f, income: Number(e.target.value) }))}
-      />
-    </div>
-    <div className="grid grid-cols-4 items-center gap-4">
-      <Label htmlFor="role" className="text-right">บทบาท</Label>
-      <Select
-        value={form.role}
-        onValueChange={val => setForm(f => ({ ...f, role: val as Director['role'] }))}
-      >
-        <SelectTrigger className="col-span-3">
-          <SelectValue placeholder="เลือกบทบาท" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="admin">ผู้ดูแลระบบ</SelectItem>
-          <SelectItem value="president">ประธาน</SelectItem>
-          <SelectItem value="staff">เจ้าหน้าที่</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-    <div className="grid grid-cols-4 items-center gap-4">
-      <Label htmlFor="isActive" className="text-right">สถานะ</Label>
-      <Select
-        value={form.isActive ? 'active' : 'inactive'}
-        onValueChange={val => setForm(f => ({ ...f, isActive: val === 'active' }))}
-      >
-        <SelectTrigger className="col-span-3">
-          <SelectValue placeholder="เลือกสถานะ" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="active">ใช้งาน</SelectItem>
-          <SelectItem value="inactive">ระงับการใช้งาน</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-  </div>
-  <div className="flex justify-end space-x-2">
-    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>ยกเลิก</Button>
-    <Button
-      onClick={handleSaveDirector}
-    >
-      บันทึก
-    </Button>
-  </div>
-</DialogContent>
-          </Dialog>
-        </div>
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-primary-hover">
+              <Plus className="mr-2 h-4 w-4" />
+              เพิ่มกรรมการใหม่
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>เพิ่มกรรมการใหม่</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="full_name">ชื่อ-นามสกุล *</Label>
+                <Input
+                  id="full_name"
+                  value={newUser.full_name}
+                  onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                  placeholder="ชื่อ-นามสกุล"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">อีเมล *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  placeholder="อีเมล"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">โทรศัพท์</Label>
+                <Input
+                  id="phone"
+                  value={newUser.phone}
+                  onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                  placeholder="โทรศัพท์"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="position">ตำแหน่ง</Label>
+                <Input
+                  id="position"
+                  value={newUser.position}
+                  onChange={(e) => setNewUser({ ...newUser, position: e.target.value })}
+                  placeholder="ตำแหน่ง"
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="address">ที่อยู่</Label>
+                <Textarea
+                  id="address"
+                  value={newUser.address}
+                  onChange={(e) => setNewUser({ ...newUser, address: e.target.value })}
+                  placeholder="ที่อยู่"
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="household_members">สมาชิกครัวเรือน</Label>
+                <Input
+                  id="household_members"
+                  type="number"
+                  value={newUser.household_members}
+                  onChange={(e) => setNewUser({ ...newUser, household_members: Number(e.target.value) })}
+                  placeholder="จำนวนสมาชิกครัวเรือน"
+                  min="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="income">รายได้</Label>
+                <Input
+                  id="income"
+                  type="number"
+                  value={newUser.income}
+                  onChange={(e) => setNewUser({ ...newUser, income: Number(e.target.value) })}
+                  placeholder="รายได้"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">บทบาท *</Label>
+                <Select
+                  value={newUser.role}
+                  onValueChange={(value: 'เจ้าหน้าที่' | 'ประธาน') => 
+                    setNewUser({ ...newUser, role: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกบทบาท" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="เจ้าหน้าที่">เจ้าหน้าที่</SelectItem>
+                    <SelectItem value="ประธาน">ประธาน</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">สถานะ</Label>
+                <Select
+                  value={newUser.status}
+                  onValueChange={(value: 'ใช้งาน' | 'ระงับ') => 
+                    setNewUser({ ...newUser, status: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกสถานะ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ใช้งาน">ใช้งาน</SelectItem>
+                    <SelectItem value="ระงับ">ระงับ</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowAddDialog(false)}>ยกเลิก</Button>
+              <Button onClick={handleAddUser}>บันทึก</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">กรรมการทั้งหมด</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{directors.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">กรรมการที่ใช้งาน</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {directors.filter(d => d.isActive).length}
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">กรรมการทั้งหมด</p>
+                <p className="text-2xl font-bold">{users.length}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ผู้ดูแลระบบ</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {directors.filter(d => d.role === 'admin').length}
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">ประธาน</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {users.filter(u => u.role === 'ประธาน').length}
+                </p>
+              </div>
+              <UserCheck className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">เจ้าหน้าที่</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {users.filter(u => u.role === 'เจ้าหน้าที่').length}
+                </p>
+              </div>
+              <Users className="h-8 w-8 text-orange-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">ใช้งาน</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {users.filter(u => u.status === 'ใช้งาน').length}
+                </p>
+              </div>
+              <UserCheck className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
@@ -503,20 +410,23 @@ const Directors = () => {
 
       {/* Search */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
+        <CardHeader>
+          <CardTitle>ค้นหาข้อมูลกรรมการ</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="ค้นหากรรมการ..."
+              placeholder="ค้นหาตามชื่อ, อีเมล, หรือตำแหน่ง..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
+              className="pl-10"
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Directors Table */}
+      {/* Users Table */}
       <Card>
         <CardHeader>
           <CardTitle>รายชื่อกรรมการ</CardTitle>
@@ -534,59 +444,182 @@ const Directors = () => {
                 <TableHead>รายได้</TableHead>
                 <TableHead>บทบาท</TableHead>
                 <TableHead>สถานะ</TableHead>
-                <TableHead>จัดการ</TableHead>
+                <TableHead className="text-right">จัดการ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDirectors.map((director) => (
-                <TableRow key={director.id}>
-                  <TableCell className="font-medium">{director.name}</TableCell>
-                  <TableCell>{director.email}</TableCell>
-                  <TableCell>{director.phone}</TableCell>
-                  <TableCell>{director.position}</TableCell>
-                  <TableCell className="max-w-xs truncate">{director.address}</TableCell>
-                  <TableCell>{director.households}</TableCell>
-                  <TableCell>฿{director.income.toLocaleString()}</TableCell>
+              {filteredUsers.map((userData) => (
+                <TableRow key={userData.user_id}>
+                  <TableCell className="font-medium">{userData.full_name}</TableCell>
+                  <TableCell>{userData.email}</TableCell>
+                  <TableCell>{userData.phone || '-'}</TableCell>
+                  <TableCell>{userData.position || '-'}</TableCell>
+                  <TableCell className="max-w-xs truncate">{userData.address || '-'}</TableCell>
+                  <TableCell className="text-center">{userData.household_members}</TableCell>
+                  <TableCell>฿{userData.income.toLocaleString()}</TableCell>
                   <TableCell>
-                    <Badge variant={director.role === 'admin' ? 'default' : 'secondary'}>
-                      {director.role === 'admin' ? 'ผู้ดูแลระบบ' : 
-                       director.role === 'president' ? 'ประธาน' : 'เจ้าหน้าที่'}
+                    <Badge variant={userData.role === 'ประธาน' ? 'default' : 'secondary'}>
+                      {userData.role}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge 
-                      variant={director.isActive ? 'default' : 'destructive'}
-                      className="cursor-pointer"
-                      onClick={() => handleToggleStatus(director.id)}
-                    >
-                      {director.isActive ? 'ใช้งาน' : 'ระงับการใช้งาน'}
+                    <Badge variant={userData.status === 'ใช้งาน' ? 'default' : 'destructive'}>
+                      {userData.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="outline" 
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
                         size="sm"
-                        onClick={() => handleEditDirector(director)}
+                        onClick={() => handleEditUser(userData)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant="destructive"
+                        variant="outline"
                         size="sm"
-                        disabled={director.role === 'admin'}
-                        onClick={() => handleDeleteDirector(director)}
+                        className="text-red-600 hover:text-red-700 hover:border-red-300"
+                        onClick={() => handleDeleteUser(userData.user_id)}
                       >
-                        ลบ
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
+              {filteredUsers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center text-muted-foreground">
+                    ไม่พบข้อมูลกรรมการ
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>แก้ไขข้อมูลกรรมการ</DialogTitle>
+          </DialogHeader>
+          {editingUser && (
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-full_name">ชื่อ-นามสกุล *</Label>
+                <Input
+                  id="edit-full_name"
+                  value={editingUser.full_name}
+                  onChange={(e) => setEditingUser({ ...editingUser, full_name: e.target.value })}
+                  placeholder="ชื่อ-นามสกุล"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">อีเมล *</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editingUser.email}
+                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                  placeholder="อีเมล"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">โทรศัพท์</Label>
+                <Input
+                  id="edit-phone"
+                  value={editingUser.phone}
+                  onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                  placeholder="โทรศัพท์"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-position">ตำแหน่ง</Label>
+                <Input
+                  id="edit-position"
+                  value={editingUser.position}
+                  onChange={(e) => setEditingUser({ ...editingUser, position: e.target.value })}
+                  placeholder="ตำแหน่ง"
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="edit-address">ที่อยู่</Label>
+                <Textarea
+                  id="edit-address"
+                  value={editingUser.address}
+                  onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
+                  placeholder="ที่อยู่"
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-household_members">สมาชิกครัวเรือน</Label>
+                <Input
+                  id="edit-household_members"
+                  type="number"
+                  value={editingUser.household_members}
+                  onChange={(e) => setEditingUser({ ...editingUser, household_members: Number(e.target.value) })}
+                  placeholder="จำนวนสมาชิกครัวเรือน"
+                  min="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-income">รายได้</Label>
+                <Input
+                  id="edit-income"
+                  type="number"
+                  value={editingUser.income}
+                  onChange={(e) => setEditingUser({ ...editingUser, income: Number(e.target.value) })}
+                  placeholder="รายได้"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">บทบาท *</Label>
+                <Select
+                  value={editingUser.role}
+                  onValueChange={(value: 'เจ้าหน้าที่' | 'ประธาน') => 
+                    setEditingUser({ ...editingUser, role: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกบทบาท" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="เจ้าหน้าที่">เจ้าหน้าที่</SelectItem>
+                    <SelectItem value="ประธาน">ประธาน</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">สถานะ</Label>
+                <Select
+                  value={editingUser.status}
+                  onValueChange={(value: 'ใช้งาน' | 'ระงับ') => 
+                    setEditingUser({ ...editingUser, status: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกสถานะ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ใช้งาน">ใช้งาน</SelectItem>
+                    <SelectItem value="ระงับ">ระงับ</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>ยกเลิก</Button>
+            <Button onClick={handleUpdateUser}>บันทึก</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

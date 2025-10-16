@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 export type UserRole = 'admin' | 'president' | 'staff';
 
@@ -14,6 +14,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: () => boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,12 +46,31 @@ const mockUsers: Record<string, User & { password: string }> = {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // โหลด user จาก localStorage เมื่อ app เริ่มทำงาน
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem('kokko_user');
+      if (savedUser) {
+        const userData = JSON.parse(savedUser);
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('Error loading user from localStorage:', error);
+      localStorage.removeItem('kokko_user');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     const userData = mockUsers[email];
     if (userData && userData.password === password) {
       const { password: _, ...userWithoutPassword } = userData;
       setUser(userWithoutPassword);
+      // เก็บ user ใน localStorage
+      localStorage.setItem('kokko_user', JSON.stringify(userWithoutPassword));
       return true;
     }
     return false;
@@ -58,6 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null);
+    // ลบ user จาก localStorage
+    localStorage.removeItem('kokko_user');
   };
 
   const isAuthenticated = () => {
@@ -65,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

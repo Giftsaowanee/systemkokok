@@ -1,85 +1,46 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-//import { supabase } from '../lib/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Calculator, Plus, Search, Edit, TrendingUp, TrendingDown, CreditCard, Banknote, Printer } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, CreditCard, Banknote, Printer, Filter, X } from 'lucide-react';
 
-interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  category: string;
-  subcategory?: string;
-  type: 'income' | 'expense' | 'stock' | 'dividend';
+interface AccountingRecord {
+  finance_id: number;
+  type: string;
+  income: number;
+  expense: number;
   amount: number;
-  paymentMethod: 'cash' | 'transfer' | 'credit';
-  reference?: string;
-  unit?: string;
-  status?: 'completed' | 'pending' | 'cancelled'; // Add status if used elsewhere
+  description: string;
+  transaction_date: string;
+  profit: number;
+  dividend: number;
+  share: number;
+  person_name: string;
+  category: string;
+  is_loss?: boolean;
 }
-
-interface Member {
-  id: number;
-  name: string;
-  shares?: number;
-  // ...other fields...
-}
-
-// สมมติว่ามีข้อมูลสมาชิก
-//const [members, setMembers] = useState<{ id: string; name: string; shares: number }[]>([]);
-
-const monthOptions = [
-  { value: 'all', label: 'ทุกเดือน' },
-  { value: '01', label: 'มกราคม' },
-  { value: '02', label: 'กุมภาพันธ์' },
-  { value: '03', label: 'มีนาคม' },
-  { value: '04', label: 'เมษายน' },
-  { value: '05', label: 'พฤษภาคม' },
-  { value: '06', label: 'มิถุนายน' },
-  { value: '07', label: 'กรกฎาคม' },
-  { value: '08', label: 'สิงหาคม' },
-  { value: '09', label: 'กันยายน' },
-  { value: '10', label: 'ตุลาคม' },
-  { value: '11', label: 'พฤศจิกายน' },
-  { value: '12', label: 'ธันวาคม' },
-];
 
 const Accounting = () => {
-  // ✅ ประกาศ useState สำหรับ members ในฟังก์ชันหลัก
-  const [members, setMembers] = useState<Member[]>([]);
-  // ...existing state...
-  const [state, setState] = useState(0);
   const { user } = useAuth();
   const { toast } = useToast();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
-    date: '',
-    description: '',
-    category: '',
-    amount: 0,
-  });
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedYear, setSelectedYear] = useState('2024');
-  const [selectedMonth, setSelectedMonth] = useState('all'); // default เป็นทุกเดือน
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-
-  // เปลี่ยน state สำหรับกรองประเภท
-  const [selectedType, setSelectedType] = useState<string>('all');
+  const [accountingData, setAccountingData] = useState<AccountingRecord[]>([]);
+  const [filteredData, setFilteredData] = useState<AccountingRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [dividendPerShare, setDividendPerShare] = useState(0);
+  const [isProfit, setIsProfit] = useState(true);
+  
+  // ตัวแปรสำหรับการกรอง
+  const [typeFilter, setTypeFilter] = useState<string>('ทั้งหมด');
+  const [categoryFilter, setCategoryFilter] = useState<string>('ทั้งหมด');
+  const [personFilter, setPersonFilter] = useState<string>('');
 
   // Only president and staff can access this page
-  if (!['president', 'staff'].includes(user?.role || '')) {
+  if (user?.role !== 'president' && user?.role !== 'staff') {
     return (
       <div className="p-6 text-center">
         <h1 className="text-2xl font-bold text-destructive">ไม่มีสิทธิ์เข้าถึง</h1>
@@ -88,745 +49,346 @@ const Accounting = () => {
     );
   }
 
-  const fetchTransactions = async () => {
-    const res = await fetch('http://localhost:3001/transactions');
-    const data = await res.json();
-    setTransactions(data);
-  };
-
-  useEffect(() => {
-    fetchTransactions();
-  }, []);
-
-  useEffect(() => {
-    // โหลดข้อมูลสมาชิก
-    fetch('http://localhost:3001/members')
-      .then(res => res.json())
-      .then(data => setMembers(data));
-  }, []);
-
-  // คำนวณรายรับรวมและหุ้นรวม
-  const totalIncome = transactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalStock = transactions
-    .filter(t => t.type === 'stock')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  // คำนวณจำนวนหุ้นทั้งหมด
-  const totalShares = members.reduce((sum, m) => sum + (m.shares ?? 0), 0);
-  const totalSharesValue = totalShares * 1000;
-
-  // คำนวณปันผลต่อหุ้น
-  const dividendPerShare = totalShares > 0 ? (totalIncome + totalStock) / totalShares : 0;
-
-  // กำหนด 1 หุ้น = 1,000 บาท
-  const totalStockAmount = transactions
-    .filter(t => t.type === 'stock')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalStocks = Math.floor(totalStockAmount / 1000);
-
-  const handleAddTransaction = async () => {
-    // ไม่ต้องเช็คข้อมูลครบทุกช่อง
-    const res = await fetch('http://localhost:3001/transactions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newTransaction)
-    });
-    const data = await res.json();
-    if (data.error) {
-      toast({ title: "เกิดข้อผิดพลาด", description: data.error, variant: "destructive" });
-      return;
-    }
-    // รีเซ็ตข้อมูลฟอร์ม
-    setNewTransaction({
-      date: '',
-      description: '',
-      category: '',
-      amount: 0,
-      reference: '',
-      type: undefined,
-      paymentMethod: undefined,
-      unit: ''
-    });
-    fetchTransactions(); // ดึงข้อมูลใหม่หลังบันทึก
-  };
-
-  // ปรับ filteredTransactions ให้กรองตามเดือนที่เลือก (ถ้าเลือก 'all' ให้แสดงทุกเดือน)
-  const filteredTransactions = transactions.filter(transaction => {
-    const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.subcategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || transaction.category === selectedCategory;
-    const matchesType = selectedType === 'all' || transaction.type === selectedType;
-    const matchesYear = transaction.date.startsWith(selectedYear);
-    const matchesMonth = selectedMonth === 'all' || transaction.date.slice(5, 7) === selectedMonth;
-    return matchesSearch && matchesCategory && matchesType && matchesYear && matchesMonth;
-  });
-
-  const totalExpense = transactions
-    .filter(
-      t =>
-        t.type === 'expense' &&
-        t.status === 'completed' &&
-        t.date.startsWith(selectedYear)
-    )
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const netBalance = totalIncome - totalExpense;
-
-  const handleStatusChange = async (id: string, newStatus: Transaction['status']) => {
-    // อัปเดตสถานะใน backend
-    const res = await fetch(`http://localhost:3001/transactions/${id}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus })
-    });
-    const data = await res.json();
-    if (data.error) {
+  // ดึงข้อมูลบัญชี
+  const fetchAccountingRecords = async () => {
+    setLoading(true);
+    try {
+      console.log('Fetching accounting records...');
+      const response = await fetch('http://localhost:3001/accounting');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Fetched accounting data:', data);
+      setAccountingData(data.data || data);
+      setFilteredData(data.data || data);
+      setDividendPerShare(data.dividend_per_share || 0);
+      setIsProfit(data.is_profit !== false);
+    } catch (error) {
+      console.error('Error fetching accounting records:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
-        description: data.error,
+        description: "ไม่สามารถดึงข้อมูลบัญชีได้",
         variant: "destructive"
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-    // โหลดข้อมูลใหม่
-    fetchTransactions();
-    toast({
-      title: "อัพเดทสถานะสำเร็จ",
-      description: "สถานะรายการถูกอัพเดทแล้ว"
+  };
+
+  // กรองข้อมูล
+  const applyFilters = () => {
+    let filtered = [...accountingData];
+
+    // กรองตามประเภท (รายรับ/รายจ่าย)
+    if (typeFilter !== 'ทั้งหมด') {
+      filtered = filtered.filter(record => record.type === typeFilter);
+    }
+
+    // กรองตามหมวดหมู่ (หุ้น/การขาย/ผลผลิต)
+    if (categoryFilter !== 'ทั้งหมด') {
+      filtered = filtered.filter(record => record.category === categoryFilter);
+    }
+
+    // กรองตามชื่อบุคคล
+    if (personFilter) {
+      filtered = filtered.filter(record => 
+        record.person_name.toLowerCase().includes(personFilter.toLowerCase())
+      );
+    }
+
+    setFilteredData(filtered);
+  };
+
+  // เคลียร์ตัวกรอง
+  const clearFilters = () => {
+    setTypeFilter('ทั้งหมด');
+    setCategoryFilter('ทั้งหมด');
+    setPersonFilter('');
+    setFilteredData(accountingData);
+  };
+
+  // คำนวณสรุปยอด
+  const calculateSummary = () => {
+    const totalIncome = filteredData.reduce((sum, record) => sum + record.income, 0);
+    const totalExpense = filteredData.reduce((sum, record) => sum + record.expense, 0);
+    const netProfit = totalIncome - totalExpense;
+    
+    return { totalIncome, totalExpense, netProfit };
+  };
+
+  // ใช้ useEffect เพื่อกรองข้อมูลเมื่อตัวกรองเปลี่ยน
+  useEffect(() => {
+    applyFilters();
+  }, [typeFilter, categoryFilter, personFilter, accountingData]);
+
+  // ดึงข้อมูลเมื่อ component โหลด
+  useEffect(() => {
+    fetchAccountingRecords();
+  }, []);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('th-TH', {
+      style: 'currency',
+      currency: 'THB'
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
-  const getTypeColor = (type: Transaction['type']) => {
-    return type === 'income' ? 'default' : 'destructive';
-  };
-
-  const getStatusColor = (status: Transaction['status']) => {
-    switch (status) {
-      case 'completed': return 'default';
-      case 'pending': return 'secondary';
-      case 'cancelled': return 'destructive';
-      default: return 'default';
-    }
-  };
-
-  const getStatusText = (status: Transaction['status']) => {
-    switch (status) {
-      case 'completed': return 'สำเร็จ';
-      case 'pending': return 'รอดำเนินการ';
-      case 'cancelled': return 'ยกเลิก';
-      default: return status;
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingTransaction) return;
-    const res = await fetch(`http://localhost:3001/transactions/${editingTransaction.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editingTransaction)
-    });
-    const data = await res.json();
-    if (data.error) {
-      toast({ title: "เกิดข้อผิดพลาด", description: data.error, variant: "destructive" });
-      return;
-    }
-    setEditDialogOpen(false);
-    setEditingTransaction(null);
-    fetchTransactions(); // โหลดข้อมูลใหม่
-    toast({
-      title: "บันทึกการแก้ไขสำเร็จ",
-      description: "รายการถูกแก้ไขแล้ว"
-    });
-  };
+  const { totalIncome, totalExpense, netProfit } = calculateSummary();
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">จัดการบัญชี</h1>
-          <p className="text-muted-foreground">จัดการรายรับ-รายจ่าย และติดตามงบการเงิน</p>
+          <h1 className="text-3xl font-bold tracking-tight">บัญชีรายบุคคล</h1>
+          <p className="text-muted-foreground">แสดงข้อมูลรายรับ-รายจ่ายแยกตามบุคคล</p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline"
-            onClick={() => window.print()}
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            พิมพ์รายงาน
-          </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={() => setIsDialogOpen(true)} 
-              className="bg-primary hover:bg-primary/90"
-              disabled={user.role !== 'staff' && user.role !== 'president'}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              เพิ่มรายการ
-            </Button>
-          </DialogTrigger>
-          {/* Dialog เพิ่มรายการใหม่ */}
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>เพิ่มรายการใหม่</DialogTitle>
-              <DialogDescription>
-                กรอกข้อมูลรายละเอียดรายการบัญชีให้ครบถ้วน
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              {/* อ้างอิง (ลำดับ) */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="reference" className="text-right">ลำดับ</Label>
-                <Input
-                  id="reference"
-                  placeholder="หมายเลขลำดับ/อ้างอิง (ถ้ามี)"
-                  className="col-span-3"
-                  value={newTransaction.reference || ''}
-                  onChange={e => setNewTransaction({ ...newTransaction, reference: e.target.value })}
-                />
-              </div>
-              {/* รายละเอียด */}
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="description" className="text-right mt-2">รายละเอียด</Label>
-                <Textarea
-                  id="description"
-                  placeholder="รายละเอียดรายการ"
-                  className="col-span-3"
-                  value={newTransaction.description || ''}
-                  onChange={e => setNewTransaction({ ...newTransaction, description: e.target.value })}
-                />
-              </div>
-              {/* หมวดหมู่ */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="category" className="text-right">หมวดหมู่</Label>
-                <Select
-                  value={newTransaction.category || ''}
-                  onValueChange={val => setNewTransaction({ ...newTransaction, category: val })}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="เลือกหมวดหมู่" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="สมุนไพรสด">สมุนไพรสด</SelectItem>
-                    <SelectItem value="สมุนไพรแปรรูป">สมุนไพรแปรรูป</SelectItem>
-                    <SelectItem value="อื่นๆ">อื่นๆ</SelectItem> {/* เพิ่มตรงนี้ */}
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* ประเภท */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="type" className="text-right">ประเภท</Label>
-                <Select
-                  value={newTransaction.type}
-                  onValueChange={val => setNewTransaction({ ...newTransaction, type: val as Transaction['type'] })}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="เลือกประเภท" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="income">รายรับ</SelectItem>
-                    <SelectItem value="expense">รายจ่าย</SelectItem>
-                    <SelectItem value="stock">หุ้น</SelectItem>
-                    <SelectItem value="dividend">ปันผล</SelectItem> {/* เพิ่มตรงนี้ */}
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* จำนวนเงิน */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="amount" className="text-right">จำนวนเงิน</Label>
-                <Input
-                  id="amount"
-                  placeholder="จำนวนเงิน (บาท)"
-                  className="col-span-3"
-                  type="number"
-                  value={newTransaction.amount || ''}
-                  onChange={e => setNewTransaction({ ...newTransaction, amount: Number(e.target.value) })}
-                />
-              </div>
-              {/* วิธีชำระ */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="paymentMethod" className="text-right">วิธีชำระ</Label>
-                <Select
-                  value={newTransaction.paymentMethod}
-                  onValueChange={val => setNewTransaction({ ...newTransaction, paymentMethod: val as Transaction['paymentMethod'] })}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="เลือกวิธีชำระเงิน" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">เงินสด</SelectItem>
-                    <SelectItem value="transfer">โอนเงิน</SelectItem>
-                    <SelectItem value="credit">เครดิต</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* หน่วยน้ำหนัก */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="unit" className="text-right">หน่วยน้ำหนัก</Label>
-                <Select
-                  value={newTransaction.unit || ''}
-                  onValueChange={val => setNewTransaction({ ...newTransaction, unit: val })}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="เลือกหน่วย" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="กรัม">กรัม</SelectItem>
-                    <SelectItem value="กิโลกรัม">กิโลกรัม</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* วันที่ (ย้ายไปล่างสุด) */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="date" className="text-right">วันที่</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  className="col-span-3"
-                  value={newTransaction.date || ''}
-                  onChange={e => setNewTransaction({ ...newTransaction, date: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>ยกเลิก</Button>
-              <Button onClick={() => {
-                setIsDialogOpen(false);
-                handleAddTransaction();
-                toast({
-                  title: "เพิ่มรายการสำเร็จ",
-                  description: "รายการใหม่ถูกเพิ่มแล้ว"
-                });
-              }}>
-                บันทึก
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-        </div>
+        <Button onClick={fetchAccountingRecords} disabled={loading} variant="outline">
+          {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
+        </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-green-50">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              <CardTitle className="text-base font-semibold text-green-700">รายรับรวม</CardTitle>
-            </div>
+            <CardTitle className="text-sm font-medium">รายรับรวม</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-700">
-              ฿{Number(totalIncome).toLocaleString('th-TH', { minimumFractionDigits: 0 })}
+            <div className="text-2xl font-bold text-green-600">
+              {formatCurrency(totalIncome)}
             </div>
-            <div className="text-sm text-green-800 mt-2">
-              รวม {transactions.filter(t => t.type === 'income').length} รายการบัญชีรายรับ
-            </div>
+            <p className="text-xs text-muted-foreground">
+              จากรายการที่แสดง {filteredData.filter(r => r.type === 'รายรับ').length} รายการ
+            </p>
           </CardContent>
         </Card>
-        
-        <Card className="bg-blue-50">
+
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
-              <CardTitle className="text-base font-semibold text-blue-700">หุ้นรวม</CardTitle>
-            </div>
+            <CardTitle className="text-sm font-medium">รายจ่ายรวม</CardTitle>
+            <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-700">
-              {totalShares.toLocaleString()} หุ้น
+            <div className="text-2xl font-bold text-red-600">
+              {formatCurrency(totalExpense)}
             </div>
-            <div className="text-md text-green-700 mt-2">
-              มูลค่ารวม: ฿{totalSharesValue.toLocaleString()}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">(1 หุ้น = 1,000 บาท)</div>
+            <p className="text-xs text-muted-foreground">
+              จากรายการที่แสดง {filteredData.filter(r => r.type === 'รายจ่าย').length} รายการ
+            </p>
           </CardContent>
         </Card>
-        
-        <Card className="bg-yellow-50">
+
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-yellow-600" />
-              <CardTitle className="text-base font-semibold text-yellow-700">ปันผลต่อหุ้น</CardTitle>
-            </div>
+            <CardTitle className="text-sm font-medium">กำไรสุทธิ</CardTitle>
+            <Banknote className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-700">
-              ฿{Number(dividendPerShare).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+            <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+              {formatCurrency(netProfit)}
             </div>
-            <div className="text-sm text-yellow-800 mt-2">
-              ปันผลรวม = รายรับ + หุ้น / จำนวนหุ้นทั้งหมด
-            </div>
+            <p className="text-xs text-muted-foreground">
+              รายรับ - รายจ่าย
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Filters */}
+      {/* Filter Section */}
       <Card>
         <CardHeader>
-          <CardTitle>ค้นหาและกรองข้อมูล</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              ตัวกรองข้อมูล
+            </CardTitle>
+            <Button 
+              onClick={clearFilters} 
+              variant="outline" 
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <X className="h-4 w-4" />
+              ล้างตัวกรอง
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="col-span-2 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* ประเภท */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">ประเภท</label>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ทั้งหมด">ทั้งหมด</SelectItem>
+                  <SelectItem value="รายรับ">รายรับ</SelectItem>
+                  <SelectItem value="รายจ่าย">รายจ่าย</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* หมวดหมู่ */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">หมวดหมู่</label>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ทั้งหมด">ทั้งหมด</SelectItem>
+                  <SelectItem value="หุ้น">หุ้น</SelectItem>
+                  <SelectItem value="การขาย">การขาย</SelectItem>
+                  <SelectItem value="ผลผลิต">ผลผลิต</SelectItem>
+                  <SelectItem value="ปันผล">ปันผล</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* ชื่อบุคคล */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">ชื่อบุคคล</label>
               <Input
-                placeholder="ค้นหารายการ..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                type="text"
+                placeholder="ค้นหาชื่อบุคคล..."
+                value={personFilter}
+                onChange={(e) => setPersonFilter(e.target.value)}
               />
-            </div>
-            <div>
-              <Label>ประเภท</Label>
-              <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกประเภท" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">ทั้งหมด</SelectItem>
-                  <SelectItem value="stock">หุ้น</SelectItem>
-                  <SelectItem value="income">รายรับ</SelectItem>
-                  <SelectItem value="expense">รายจ่าย</SelectItem>
-                  <SelectItem value="dividend">ปันผล</SelectItem> {/* เพิ่มตรงนี้ */}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>ปี</Label>
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกปี" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2025">2025</SelectItem>
-                  <SelectItem value="2024">2024</SelectItem>
-                  <SelectItem value="2023">2023</SelectItem>
-                  <SelectItem value="2022">2022</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>เดือน</Label>
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกเดือน" />
-                </SelectTrigger>
-                <SelectContent>
-                  {monthOptions.map(month => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Transactions Table */}
-      
-      {/* Edit Transaction Dialog */}
-      {editingTransaction && (
-        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>แก้ไขรายการบัญชี</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              {/* ลำดับ/อ้างอิง */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="reference" className="text-right">ลำดับ</Label>
-                <Input
-                  id="reference"
-                  placeholder="หมายเลขลำดับ/อ้างอิง (ถ้ามี)"
-                  className="col-span-3"
-                  value={editingTransaction.reference || ''}
-                  onChange={e => setEditingTransaction({ ...editingTransaction, reference: e.target.value })}
-                />
-              </div>
-              {/* รายละเอียด */}
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="description" className="text-right mt-2">รายละเอียด</Label>
-                <Textarea
-                  id="description"
-                  placeholder="รายละเอียดรายการ"
-                  className="col-span-3"
-                  value={editingTransaction.description || ''}
-                  onChange={e => setEditingTransaction({ ...editingTransaction, description: e.target.value })}
-                />
-              </div>
-              {/* หมวดหมู่ */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="category" className="text-right">หมวดหมู่</Label>
-                <Select
-                  value={editingTransaction.category}
-                  onValueChange={val => setEditingTransaction({ ...editingTransaction, category: val })}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="เลือกหมวดหมู่" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="สมุนไพรสด">สมุนไพรสด</SelectItem>
-                    <SelectItem value="สมุนไพรแปรรูป">สมุนไพรแปรรูป</SelectItem>
-                    <SelectItem value="อื่นๆ">อื่นๆ</SelectItem> {/* เพิ่มตรงนี้ */}
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* ประเภท */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="type" className="text-right">ประเภท</Label>
-                <Select
-                  value={editingTransaction.type}
-                  onValueChange={val => setEditingTransaction({ ...editingTransaction, type: val as Transaction['type'] })}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="เลือกประเภท" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="income">รายรับ</SelectItem>
-                    <SelectItem value="expense">รายจ่าย</SelectItem>
-                    <SelectItem value="stock">หุ้น</SelectItem>
-                    <SelectItem value="dividend">ปันผล</SelectItem> {/* เพิ่มตรงนี้ */}
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* จำนวนเงิน */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="amount" className="text-right">จำนวนเงิน</Label>
-                <Input
-                  id="amount"
-                  placeholder="จำนวนเงิน (บาท)"
-                  className="col-span-3"
-                  type="number"
-                  value={editingTransaction.amount}
-                  onChange={e => setEditingTransaction({ ...editingTransaction, amount: Number(e.target.value) })}
-                />
-              </div>
-              {/* วิธีชำระ */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="paymentMethod" className="text-right">วิธีชำระ</Label>
-                <Select
-                  value={editingTransaction.paymentMethod}
-                  onValueChange={val => setEditingTransaction({ ...editingTransaction, paymentMethod: val as Transaction['paymentMethod'] })}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="เลือกวิธีชำระเงิน" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">เงินสด</SelectItem>
-                    <SelectItem value="transfer">โอนเงิน</SelectItem>
-                    <SelectItem value="credit">เครดิต</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* สถานะ */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">สถานะ</Label>
-                <Select
-                  value={editingTransaction.status}
-                  onValueChange={val => setEditingTransaction({ ...editingTransaction, status: val as Transaction['status'] })}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="เลือกสถานะ" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="completed">สำเร็จ</SelectItem>
-                    <SelectItem value="pending">รอดำเนินการ</SelectItem>
-                    <SelectItem value="cancelled">ยกเลิก</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* วันที่ */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="date" className="text-right">วันที่</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  className="col-span-3"
-                  value={editingTransaction.date}
-                  onChange={e => setEditingTransaction({ ...editingTransaction, date: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => {
-                setEditDialogOpen(false);
-                setEditingTransaction(null);
-              }}>
-                ยกเลิก
-              </Button>
-              <Button onClick={handleSaveEdit}>บันทึกการแก้ไข</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* แสดงปันผลตามสมาชิก เฉพาะเมื่อเลือกประเภท "ปันผล" */}
-      {selectedType === 'dividend' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>ปันผลตามสมาชิก</CardTitle>
-          </CardHeader>
-          <CardContent>
+      {/* Data Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>ข้อมูลบัญชีรายบุคคล</span>
+            <Badge variant="secondary">
+              แสดง {filteredData.length} รายการ จากทั้งหมด {accountingData.length} รายการ
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ชื่อสมาชิก</TableHead>
-                  <TableHead>จำนวนหุ้น</TableHead>
-                  <TableHead>ปันผลที่ได้รับ</TableHead>
+                  <TableHead className="w-[80px]">ลำดับ</TableHead>
+                  <TableHead>วันที่</TableHead>
+                  <TableHead>ชื่อบุคคล</TableHead>
+                  <TableHead>ประเภท</TableHead>
+                  <TableHead>หมวดหมู่</TableHead>
+                  <TableHead>รายละเอียด</TableHead>
+                  <TableHead className="text-right">จำนวนหุ้น</TableHead>
+                  <TableHead className="text-right">รายรับปันผล</TableHead>
+                  <TableHead className="text-right">รายรับ</TableHead>
+                  <TableHead className="text-right">รายจ่าย</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {members.map(member => (
-                  <TableRow key={member.id}>
-                    <TableCell>{member.name}</TableCell>
-                    <TableCell>{member.shares}</TableCell>
-                    <TableCell>
-                      ฿{Number(member.shares * dividendPerShare).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8">
+                      กำลังโหลดข้อมูล...
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* แสดงรายการหุ้น เฉพาะเมื่อเลือกประเภท "หุ้น" */}
-      {selectedType === 'stock' && (
-        <Card className="bg-blue-50 mb-4">
-          <CardHeader>
-            <CardTitle>หุ้นรวมจากสมาชิก</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold text-blue-700">
-              จำนวนหุ้น: {totalShares.toLocaleString()} หุ้น
-            </div>
-            <div className="text-md text-green-700">
-              มูลค่ารวม: ฿{totalSharesValue.toLocaleString()}
-            </div>
-            <div className="text-xs text-muted-foreground">(1 หุ้น = 1,000 บาท)</div>
-            {/* ตารางรายชื่อสมาชิกที่มีหุ้น */}
-            <div className="mt-6">
-              <Table>
-                <TableHeader>
+                ) : filteredData.length === 0 ? (
                   <TableRow>
-                    <TableHead>ชื่อสมาชิก</TableHead>
-                    <TableHead>จำนวนหุ้น</TableHead>
-                    <TableHead>มูลค่าหุ้น (บาท)</TableHead>
+                    <TableCell colSpan={10} className="text-center py-8">
+                      ไม่พบข้อมูล
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members
-                    .filter(m => (m.shares ?? 0) > 0)
-                    .map(m => (
-                      <TableRow key={m.id}>
-                        <TableCell>{m.name}</TableCell>
-                        <TableCell>{m.shares?.toLocaleString() ?? 0}</TableCell>
-                        <TableCell>฿{((m.shares ?? 0) * 1000).toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* แสดงตารางบัญชีเฉพาะเมื่อไม่ได้เลือก "หุ้น" */}
-      {selectedType !== 'stock' && selectedType !== 'dividend' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>รายการบัญชี</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ลำดับ</TableHead>
-                  <TableHead>หมวดหมู่</TableHead>
-                  <TableHead>ประเภท</TableHead>
-                  <TableHead>รายละเอียด</TableHead>
-                  <TableHead>จำนวนเงิน</TableHead>
-                  <TableHead>วันที่</TableHead>
-                  <TableHead>วิธีชำระ</TableHead>
-                  <TableHead>การจัดการ</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTransactions
-                  .slice() // copy array
-                  .sort((a, b) => {
-                    // แปลง reference เป็นตัวเลข ถ้าไม่มีให้เป็น 0
-                    const refA = Number(a.reference) || 0;
-                    const refB = Number(b.reference) || 0;
-                    return refA - refB;
-                  })
-                  .map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell>{transaction.reference || '-'}</TableCell>
+                ) : (
+                  filteredData.map((record, index) => (
+                    <TableRow key={record.finance_id}>
+                      <TableCell className="font-medium">{index + 1}</TableCell>
+                      <TableCell>{formatDate(record.transaction_date)}</TableCell>
+                      <TableCell className="font-medium">{record.person_name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{transaction.category}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          transaction.type === 'income' ? 'default' :
-                          transaction.type === 'expense' ? 'destructive' :
-                          transaction.type === 'stock' ? 'secondary' : 'outline'
-                        }>
-                          {transaction.type === 'income' ? 'รายรับ' :
-                           transaction.type === 'expense' ? 'รายจ่าย' :
-                           transaction.type === 'stock' ? 'หุ้น' : 'ปันผล'}
+                        <Badge 
+                          variant={record.type === 'รายรับ' ? 'default' : 'destructive'}
+                          className={record.type === 'รายรับ' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
+                        >
+                          {record.type}
                         </Badge>
                       </TableCell>
-                      <TableCell>{transaction.description}</TableCell>
                       <TableCell>
-                        ฿{transaction.amount.toLocaleString()}
+                        <Badge variant="outline">
+                          {record.category}
+                        </Badge>
                       </TableCell>
-                      {/* ลบ TableCell ของหน่วยน้ำหนักออก */}
-                      <TableCell>{transaction.date}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-1">
-                          {transaction.paymentMethod === 'cash' ? (
-                            <Banknote className="h-4 w-4" />
-                          ) : (
-                            <CreditCard className="h-4 w-4" />
-                          )}
-                          <span className="text-sm">
-                            {transaction.paymentMethod === 'cash' ? 'เงินสด' : 
-                             transaction.paymentMethod === 'transfer' ? 'โอนเงิน' : 'เครดิต'}
+                      <TableCell className="max-w-[200px] truncate" title={record.description}>
+                        {record.description}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {record.category === 'หุ้น' ? (
+                          <span className="text-blue-600 font-semibold">
+                            {Math.round(record.amount / 1000)} หุ้น
                           </span>
-                        </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => {
-                            setEditingTransaction(transaction);
-                            setEditDialogOpen(true);
-                          }}
-                        >
-                          แก้ไข
-                        </Button>
+                      <TableCell className="text-right font-mono">
+                        {record.category === 'หุ้น' ? (
+                          // แสดงปันผลสำหรับคนที่ซื้อหุ้น โดยคำนวณจากจำนวนหุ้น
+                          dividendPerShare > 0 ? (
+                            isProfit ? (
+                              <span className="text-purple-600 font-semibold">
+                                +{formatCurrency(Math.round(record.amount / 1000) * dividendPerShare)}
+                              </span>
+                            ) : (
+                              <span className="text-red-600 font-semibold">
+                                -{formatCurrency(Math.round(record.amount / 1000) * dividendPerShare)}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {record.income > 0 && record.category !== 'ปันผล' ? (
+                          <span className="text-green-600 font-semibold">
+                            +{formatCurrency(record.income)}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {record.expense > 0 ? (
+                          <span className="text-red-600 font-semibold">
+                            -{formatCurrency(record.expense)}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ))
+                )}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

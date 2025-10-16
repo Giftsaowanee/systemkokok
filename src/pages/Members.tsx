@@ -138,6 +138,38 @@ const Members = () => {
     }
   };
 
+  const handleDeleteMember = async (memberId: number) => {
+    if (!window.confirm('ต้องการลบข้อมูลสมาชิกนี้ใช่หรือไม่?')) return;
+
+    try {
+      const res = await fetch(`http://localhost:3001/members/${memberId}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to delete member');
+      }
+
+      // โหลดข้อมูลใหม่หลังลบ
+      const res2 = await fetch('http://localhost:3001/members');
+      const membersData = await res2.json();
+      setMembers(membersData);
+
+      // แสดง toast แจ้งเตือนสำเร็จ
+      toast({
+        title: "ลบสำเร็จ",
+        description: "ลบข้อมูลสมาชิกเรียบร้อยแล้ว"
+      });
+    } catch (error) {
+      console.error('Error deleting member:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถลบข้อมูลได้",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -275,7 +307,7 @@ const Members = () => {
             </TableHeader>
             <TableBody>
               {filteredMembers.map((member) => (
-                <TableRow key={member.id}>
+                <TableRow key={member.member_id}>
                   <TableCell>{member.name}</TableCell>
                   <TableCell>{member.address}</TableCell>
                   <TableCell>
@@ -297,14 +329,24 @@ const Members = () => {
                         : '-'}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditMember(member)}
-                    >
-                      <Edit className="h-4 w-4" />
-                      แก้ไข
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditMember(member)}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        แก้ไข
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 hover:border-red-300"
+                        onClick={() => handleDeleteMember(member.member_id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

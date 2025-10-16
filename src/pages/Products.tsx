@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Search } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Plus, Search, Printer, Trash } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 interface Production {
   production_id: number;
+  product_name: string;
+  category: string;
   member_name: string;
   staff_name: string;
   quantity: string;
@@ -25,6 +26,8 @@ const Products = () => {
   const [products, setProducts] = useState<Production[]>([]);
 
   const [newProduct, setNewProduct] = useState<Partial<Production>>({
+    product_name: '',
+    category: '',
     member_name: '',
     staff_name: '',
     quantity: '',
@@ -38,6 +41,13 @@ const Products = () => {
 
   useEffect(() => {
     fetchProducts();
+    
+    // ตั้งการรีเฟรชข้อมูลทุก 30 วินาที เพื่อดูการเปลี่ยนแปลงสต็อกแบบ real-time
+    const interval = setInterval(() => {
+      fetchProducts();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchProducts = async () => {
@@ -62,6 +72,8 @@ const Products = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          product_name: newProduct.product_name,
+          category: newProduct.category,
           member_name: newProduct.member_name,
           staff_name: newProduct.staff_name,
           quantity: newProduct.quantity,
@@ -74,6 +86,8 @@ const Products = () => {
       
       await fetchProducts();
       setNewProduct({
+        product_name: '',
+        category: '',
         member_name: '',
         staff_name: '',
         quantity: '',
@@ -109,6 +123,8 @@ const Products = () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+           product_name: editingProduct.product_name,
+          category: editingProduct.category,
           member_name: editingProduct.member_name,
           staff_name: editingProduct.staff_name,
           quantity: editingProduct.quantity,
@@ -159,8 +175,11 @@ const Products = () => {
   };
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.member_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.staff_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = 
+      (product.product_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (product.category?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      product.member_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.staff_name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
@@ -207,6 +226,24 @@ const Products = () => {
               </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="product-name">ชื่อสินค้า</Label>
+                <Input
+                  id="product-name"
+                  value={newProduct.product_name}
+                  onChange={(e) => setNewProduct({ ...newProduct, product_name: e.target.value })}
+                  placeholder="ชื่อสินค้า"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">หมวดหมู่</Label>
+                <Input
+                  id="category"
+                  value={newProduct.category}
+                  onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                  placeholder="หมวดหมู่สินค้า"
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="member-name">ชื่อสมาชิก</Label>
                 <Input
@@ -268,6 +305,24 @@ const Products = () => {
               <DialogTitle>แก้ไขข้อมูลผลผลิต</DialogTitle>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-product-name">ชื่อสินค้า</Label>
+                <Input
+                  id="edit-product-name"
+                  value={editingProduct?.product_name}
+                  onChange={(e) => setEditingProduct({ ...editingProduct!, product_name: e.target.value })}
+                  placeholder="ชื่อสินค้า"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-category">หมวดหมู่</Label>
+                <Input
+                  id="edit-category"
+                  value={editingProduct?.category}
+                  onChange={(e) => setEditingProduct({ ...editingProduct!, category: e.target.value })}
+                  placeholder="หมวดหมู่สินค้า"
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-member-name">ชื่อสมาชิก</Label>
                 <Input
@@ -354,60 +409,96 @@ const Products = () => {
             </div>
           </div>
         </CardHeader>
-
-      {/* Table Card */}
-      <Card>
         <CardContent>
           <div className="rounded-md border">
             <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>ลำดับ</TableHead>
-                <TableHead>ชื่อสมาชิก</TableHead>
-                <TableHead>ชื่อเจ้าหน้าที่</TableHead>
-                <TableHead className="text-right">จำนวน</TableHead>
-                <TableHead>หน่วย</TableHead>
-                <TableHead className="text-right">ราคาต่อหน่วย (บาท)</TableHead>
-                <TableHead className="text-right">รวมเป็นเงิน</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.map((product, index) => (
-                <TableRow key={product.production_id}>
-                  <TableCell className="font-medium">{index + 1}</TableCell>
-                  <TableCell>{product.member_name}</TableCell>
-                  <TableCell>{product.staff_name}</TableCell>
-                  <TableCell className="text-right font-medium">
-                    {Number(product.quantity).toLocaleString()}
-                  </TableCell>
-                  <TableCell>{product.unit}</TableCell>
-                  <TableCell className="text-right font-medium">
-                    {Number(product.price).toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {(Number(product.quantity) * Number(product.price)).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => handleEditProduct(product)}
-                    >
-                      แก้ไข
-                    </Button>
-                  </TableCell>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ลำดับ</TableHead>
+                  <TableHead>ชื่อสินค้า</TableHead>
+                  <TableHead>หมวดหมู่</TableHead>
+                  <TableHead>ชื่อสมาชิก</TableHead>
+                  <TableHead>ชื่อเจ้าหน้าที่</TableHead>
+                  <TableHead className="text-right">จำนวนคงเหลือ</TableHead>
+                  <TableHead>หน่วย</TableHead>
+                  <TableHead className="text-right">ราคาต่อหน่วย (บาท)</TableHead>
+                  <TableHead className="text-right">รวมเป็นเงิน</TableHead>
+                  <TableHead className="text-center">สถานะ</TableHead>
+                  <TableHead className="w-32 text-center">การดำเนินการ</TableHead>
                 </TableRow>
-              ))}
-              {/* Summary Row */}
-              <TableRow className="bg-muted/50 font-bold">
-                <TableCell colSpan={6} className="text-right">รวมมูลค่าทั้งหมด</TableCell>
-                <TableCell className="text-right">{totalValue.toLocaleString()}</TableCell>
-                <TableCell></TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.map((product, index) => {
+                  const quantity = Number(product.quantity);
+                  const price = Number(product.price);
+                  const totalValue = quantity * price;
+                  const isOutOfStock = quantity === 0;
+                  
+                  return (
+                    <TableRow key={product.production_id} className={isOutOfStock ? 'bg-red-50' : ''}>
+                      <TableCell className="font-medium">{index + 1}</TableCell>
+                      <TableCell className={isOutOfStock ? 'text-red-600 font-medium' : ''}>
+                        {product.product_name || '-'}
+                      </TableCell>
+                      <TableCell>{product.category || '-'}</TableCell>
+                      <TableCell>{product.member_name}</TableCell>
+                      <TableCell>{product.staff_name}</TableCell>
+                      <TableCell className={`text-right font-medium ${isOutOfStock ? 'text-red-600' : quantity <= 5 ? 'text-orange-600' : 'text-green-600'}`}>
+                        {quantity.toLocaleString()}
+                      </TableCell>
+                      <TableCell>{product.unit}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {price.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {totalValue.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {isOutOfStock ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            หมดแล้ว
+                          </span>
+                        ) : quantity <= 5 ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            เหลือน้อย
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            พร้อมขาย
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditProduct(product)}
+                          >
+                            แก้ไข
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:border-red-300"
+                            onClick={() => handleDeleteProduct(product.production_id)}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {/* Summary Row */}
+                <TableRow className="bg-muted/50 font-bold">
+                  <TableCell colSpan={8} className="text-right">รวมมูลค่าทั้งหมด</TableCell>
+                  <TableCell className="text-right">{totalValue.toLocaleString()}</TableCell>
+                  <TableCell colSpan={2}></TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

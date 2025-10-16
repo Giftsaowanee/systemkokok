@@ -1,581 +1,544 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Download, TrendingUp, TrendingDown, BarChart3, PieChart, Printer } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { FileText, Plus, Edit, Trash2, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
-interface ReportData {
-  period: string;
-  sales: number;
-  expenses: number;
-  profit: number;
-  orders: number;
-  customers: number;
+interface Report {
+  report_id: number;
+  title: string;
+  content: string;
+  created_date: string;
 }
 
-interface ProductReport {
-  product: string;
-  quantity: number;
-  revenue: number;
-  percentage: number;
+interface AccountingRecord {
+  finance_id: number;
+  type: string;
+  income: string | number;
+  expense: string | number;
+  amount: string | number;
+  description: string;
+  transaction_date: string;
+  profit: string | number;
+  dividend: string | number;
+  share: string | number;
 }
 
 interface Member {
-  id: number;
+  member_id: number;
   name: string;
-  shares: number;
-  // Add other member properties as needed
+  funds_amount: string | number;
+  Share_value: string | number;
 }
 
-const mockMonthlyData: ReportData[] = [
-  {
-    period: '2024-01',
-    sales: 45000,
-    expenses: 32000,
-    profit: 13000,
-    orders: 28,
-    customers: 15
-  },
-  {
-    period: '2023-12',
-    sales: 38000,
-    expenses: 28000,
-    profit: 10000,
-    orders: 22,
-    customers: 12
-  },
-  {
-    period: '2023-11',
-    sales: 42000,
-    expenses: 30000,
-    profit: 12000,
-    orders: 25,
-    customers: 14
-  }
-];
-
-const mockProductData: ProductReport[] = [
-  {
-    product: 'ลิ้นจี่สด',
-    quantity: 120,
-    revenue: 18000,
-    percentage: 40
-  },
-  {
-    product: 'ลำไย',
-    quantity: 80,
-    revenue: 12000,
-    percentage: 27
-  },
-  {
-    product: 'มะม่วงน้ำดอกไม้',
-    quantity: 60,
-    revenue: 9000,
-    percentage: 20
-  },
-  {
-    product: 'มะม่วงพันธุ์อื่น',
-    quantity: 40,
-    revenue: 6000,
-    percentage: 13
-  }
-];
+interface Production {
+  production_id: number;
+  product_name?: string;
+  category?: string;
+  member_name: string;
+  staff_name: string;
+  quantity: string | number;
+  unit: string;
+  price: string | number;
+}
 
 const Reports = () => {
-  const { user } = useAuth();
-  const [selectedPeriod, setSelectedPeriod] = useState('monthly');
-  const [selectedReport, setSelectedReport] = useState('financial');
-  const [selectedMonth, setSelectedMonth] = useState('01'); // ค่าเริ่มต้นเป็นเดือนมกราคม
+  const [reports, setReports] = useState<Report[]>([]);
+  const [accounting, setAccounting] = useState<AccountingRecord[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  interface Customer {
-    id: number;
-    name: string;
-    email?: string;
-    phone?: string;
-    address?: string;
-    // Add other customer properties as needed
-  }
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  interface Sale {
-    orderNumber: string;
-    customerName: string;
-    products?: string[];
-    totalAmount?: number;
-    orderDate?: string;
-    status?: string;
-    // Add other sale properties as needed
-  }
-  const [sales, setSales] = useState<Sale[]>([]);
-  interface Transaction {
-    id?: number;
-    type: string;
-    amount: number;
-    date: string;
-    customerId?: number;
-    description?: string;
-    // Add other transaction properties as needed
-  }
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-
-  const monthOptions = [
-    { value: '01', label: 'มกราคม' },
-    { value: '02', label: 'กุมภาพันธ์' },
-    { value: '03', label: 'มีนาคม' },
-    { value: '04', label: 'เมษายน' },
-    { value: '05', label: 'พฤษภาคม' },
-    { value: '06', label: 'มิถุนายน' },
-    { value: '07', label: 'กรกฎาคม' },
-    { value: '08', label: 'สิงหาคม' },
-    { value: '09', label: 'กันยายน' },
-    { value: '10', label: 'ตุลาคม' },
-    { value: '11', label: 'พฤศจิกายน' },
-    { value: '12', label: 'ธันวาคม' },
-  ];
+  const [productions, setProductions] = useState<Production[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [newReport, setNewReport] = useState({
+    title: '',
+    content: ''
+  });
+  
+  const [editingReport, setEditingReport] = useState<Report | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:3001/transactions')
-      .then(res => res.json())
-      .then(data => setTransactions(data));
+    fetchAllData();
   }, []);
 
-  useEffect(() => {
-    // โหลดข้อมูลสมาชิก
-    fetch('http://localhost:3001/members')
-      .then(res => res.json())
-      .then(data => setMembers(data));
-  }, []);
-
-  useEffect(() => {
-    fetch('http://localhost:3001/customers')
-      .then(res => res.json())
-      .then(data => setCustomers(data));
-  }, []);
-
-  useEffect(() => {
-    fetch('http://localhost:3001/sales')
-      .then(res => res.json())
-      .then(data => setSales(data));
-  }, []);
-
-  const getSummaryFromAccounting = () => {
-    let sales = 0, expenses = 0, profit = 0, orders = 0, customers = 0;
-    transactions.forEach(item => {
-      if (item.type === 'sale') {
-        sales += item.amount;
-        orders += 1;
-        if (item.customerId) customers += 1;
+  const fetchAllData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Fetch reports
+      const reportsRes = await fetch('http://localhost:3001/reports');
+      if (reportsRes.ok) {
+        const reportsData = await reportsRes.json();
+        setReports(reportsData);
       }
-      if (item.type === 'expense') {
-        expenses += item.amount;
+
+      // Fetch accounting data
+      const accountingRes = await fetch('http://localhost:3001/accounting');
+      if (accountingRes.ok) {
+        const accountingData = await accountingRes.json();
+        console.log('Accounting data:', accountingData);
+        // ตรวจสอบว่าเป็น object ที่มี data property หรือ array
+        const dataArray = accountingData.data || accountingData;
+        setAccounting(Array.isArray(dataArray) ? dataArray : []);
       }
-    });
-    profit = sales - expenses;
-    return { sales, expenses, profit, orders, customers };
+
+      // Fetch members
+      const membersRes = await fetch('http://localhost:3001/members');
+      if (membersRes.ok) {
+        const membersData = await membersRes.json();
+        setMembers(membersData);
+      }
+
+      // Fetch products
+      const productsRes = await fetch('http://localhost:3001/products');
+      if (productsRes.ok) {
+        const productsData = await productsRes.json();
+        console.log('Products data:', productsData);
+        setProductions(productsData);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('ไม่สามารถดึงข้อมูลได้');
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถดึงข้อมูลได้",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const summary = getSummaryFromAccounting();
-
-  // Only president and staff can access this page
-  if (!['president', 'staff'].includes(user?.role || '')) {
-    return (
-      <div className="p-6 text-center">
-        <h1 className="text-2xl font-bold text-destructive">ไม่มีสิทธิ์เข้าถึง</h1>
-        <p className="text-muted-foreground">คุณไม่มีสิทธิ์ในการเข้าถึงระบบรายงาน</p>
-      </div>
-    );
-  };
-
-  const monthlyReportData = getMonthlyReportData();
-
-  const currentData = monthlyReportData[0] || {
-    sales: 0, expenses: 0, profit: 0, orders: 0, customers: 0
-  };
-  const previousData = monthlyReportData[1] || {
-    sales: 0, expenses: 0, profit: 0, orders: 0, customers: 0
-  };
-
-  const calculateGrowth = (current: number, previous: number) => {
-    return ((current - previous) / previous * 100).toFixed(1);
-  };
-
-  const handleExportReport = () => {
-    const doc = new jsPDF();
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(16);
-
-    if (selectedReport === 'financial') {
-      doc.text('รายงานการเงิน', 20, 20);
-      doc.text('เดือน', 20, 35);
-      doc.text('ยอดขาย', 45, 35);
-      doc.text('รายจ่าย', 75, 35);
-      doc.text('กำไรสุทธิ', 105, 35);
-      doc.text('ออเดอร์', 135, 35);
-      doc.text('ลูกค้า', 165, 35);
-
-      monthlyReportData.forEach((data, idx) => {
-        const y = 45 + idx * 10;
-        doc.text(data.period, 20, y);
-        doc.text(data.sales.toLocaleString(), 45, y);
-        doc.text(data.expenses.toLocaleString(), 75, y);
-        doc.text(data.profit.toLocaleString(), 105, y);
-        doc.text(data.orders.toString(), 135, y);
-        doc.text(data.customers.toString(), 165, y);
+  const handleAddReport = async () => {
+    if (!newReport.title || !newReport.content) {
+      toast({
+        title: "กรุณากรอกข้อมูลให้ครบ",
+        description: "กรุณากรอกหัวข้อและเนื้อหารายงาน",
+        variant: "destructive"
       });
-    } else if (selectedReport === 'sales') {
-      doc.text('รายงานยอดขาย', 20, 20);
-      doc.text('หมายเลขออเดอร์', 20, 35);
-      doc.text('ชื่อลูกค้า', 60, 35);
-      doc.text('ประเภทสินค้า', 100, 35);
-      doc.text('ยอดรวม', 140, 35);
-
-      sales.forEach((sale, idx) => {
-        const y = 45 + idx * 10;
-        doc.text(sale.orderNumber, 20, y);
-        doc.text(sale.customerName, 60, y);
-        doc.text((sale.products || []).join(', '), 100, y);
-        doc.text('฿' + (sale.totalAmount || 0).toLocaleString(), 140, y);
-      });
-    } else if (selectedReport === 'customers') {
-      doc.text('รายงานลูกค้า', 20, 20);
-      doc.text('ชื่อลูกค้า', 20, 35);
-      doc.text('อีเมล', 70, 35);
-      doc.text('เบอร์โทร', 120, 35);
-      doc.text('ที่อยู่', 170, 35);
-
-      customers.forEach((customer, idx) => {
-        const y = 45 + idx * 10;
-        doc.text(customer.name, 20, y);
-        doc.text(customer.email || '', 70, y);
-        doc.text(customer.phone || '', 120, y);
-        doc.text(customer.address || '', 170, y);
-      });
-    } else if (selectedReport === 'dividends') {
-      doc.text('รายงานปันผล', 20, 20);
-      doc.text('วันที่', 20, 35);
-      doc.text('รายละเอียด', 70, 35);
-      doc.text('จำนวนเงิน', 140, 35);
-
-      dividendTransactions.forEach((row, idx) => {
-        const y = 45 + idx * 10;
-        doc.text(row.date, 20, y);
-        doc.text(row.description || '', 70, y);
-        doc.text('฿' + (row.amount || 0).toLocaleString(), 140, y);
-      });
-
-      // เพิ่มข้อมูลสมาชิกและหุ้น
-      doc.text('สมาชิกและหุ้น', 20, 65 + dividendTransactions.length * 10);
-      doc.text('ชื่อสมาชิก', 20, 80 + dividendTransactions.length * 10);
-      doc.text('จำนวนหุ้น', 70, 80 + dividendTransactions.length * 10);
-      doc.text('ปันผลที่ได้รับ', 120, 80 + dividendTransactions.length * 10);
-
-      const totalDividend = dividendTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
-      const totalShares = members.reduce((sum, m) => sum + (m.shares || 0), 0);
-      const dividendPerShare = totalShares > 0 ? totalDividend / totalShares : 0;
-
-      members.forEach((m, idx) => {
-        const y = 90 + dividendTransactions.length * 10 + idx * 10;
-        doc.text(m.name, 20, y);
-        doc.text((m.shares || 0).toString(), 70, y);
-        doc.text('฿' + ((m.shares || 0) * dividendPerShare).toLocaleString(undefined, { minimumFractionDigits: 2 }), 120, y);
-      });
+      return;
     }
 
-    doc.save(`report-${selectedReport}-${selectedPeriod}.pdf`);
+    try {
+      const res = await fetch('http://localhost:3001/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newReport)
+      });
+
+      if (!res.ok) throw new Error('Failed to add report');
+      
+      await fetchAllData();
+      setNewReport({ title: '', content: '' });
+      setShowAddDialog(false);
+      
+      toast({
+        title: "บันทึกสำเร็จ",
+        description: "เพิ่มรายงานเรียบร้อยแล้ว"
+      });
+    } catch (error) {
+      console.error('Error adding report:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถเพิ่มรายงานได้",
+        variant: "destructive"
+      });
+    }
   };
 
-  const renderFinancialReport = () => (
-    <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ยอดขาย</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              ฿{currentData.sales.toLocaleString()}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              +{calculateGrowth(currentData.sales, previousData.sales)}% จากเดือนที่แล้ว
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">รายจ่าย</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              ฿{currentData.expenses.toLocaleString()}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              +{calculateGrowth(currentData.expenses, previousData.expenses)}% จากเดือนที่แล้ว
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">กำไรสุทธิ</CardTitle>
-            <BarChart3 className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              ฿{currentData.profit.toLocaleString()}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              +{calculateGrowth(currentData.profit, previousData.profit)}% จากเดือนที่แล้ว
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ออเดอร์</CardTitle>
-            <FileText className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {currentData.orders}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              +{calculateGrowth(currentData.orders, previousData.orders)}% จากเดือนที่แล้ว
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+  const handleEditReport = (report: Report) => {
+    setEditingReport(report);
+    setShowEditDialog(true);
+  };
 
-      {/* Monthly Comparison Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>เปรียบเทียบรายเดือน</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>เดือน</TableHead>
-                <TableHead>ยอดขาย</TableHead>
-                <TableHead>รายจ่าย</TableHead>
-                <TableHead>กำไรสุทธิ</TableHead>
-                <TableHead>ออเดอร์</TableHead>
-                <TableHead>ลูกค้า</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {monthlyReportData.map((data) => (
-                <TableRow key={data.period}>
-                  <TableCell className="font-medium">{data.period}</TableCell>
-                  <TableCell className="text-green-600">฿{data.sales.toLocaleString()}</TableCell>
-                  <TableCell className="text-red-600">฿{data.expenses.toLocaleString()}</TableCell>
-                  <TableCell className="text-blue-600">฿{data.profit.toLocaleString()}</TableCell>
-                  <TableCell>{data.orders}</TableCell>
-                  <TableCell>{data.customers}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const handleUpdateReport = async () => {
+    if (!editingReport?.title || !editingReport?.content) {
+      toast({
+        title: "กรุณากรอกข้อมูลให้ครบ",
+        description: "กรุณากรอกหัวข้อและเนื้อหารายงาน",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  const renderSalesReport = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>รายงานยอดขาย</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>หมายเลขออเดอร์</TableHead>
-                <TableHead>ชื่อลูกค้า</TableHead>
-                <TableHead>ประเภทสินค้า</TableHead>
-                <TableHead>ยอดรวม</TableHead>
-                <TableHead>วันที่สั่ง</TableHead>
-                <TableHead>สถานะ</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sales.map((sale) => {
-                const customer = customers.find(c => c.name === sale.customerName);
-                return (
-                  <TableRow key={sale.orderNumber}>
-                    <TableCell>{sale.orderNumber}</TableCell>
-                    <TableCell>
-                      {customer ? (
-                        <>
-                          {customer.name}
-                          <div className="text-xs text-muted-foreground">{customer.email}</div>
-                        </>
-                      ) : sale.customerName}
-                    </TableCell>
-                    <TableCell>{sale.products?.join(', ')}</TableCell>
-                    <TableCell>฿{sale.totalAmount?.toLocaleString()}</TableCell>
-                    <TableCell>{sale.orderDate}</TableCell>
-                    <TableCell>{sale.status}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  );
+    try {
+      const res = await fetch(`http://localhost:3001/reports/${editingReport.report_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editingReport.title,
+          content: editingReport.content
+        })
+      });
 
-  const renderCustomerReport = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>รายชื่อลูกค้าทั้งหมด</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ชื่อลูกค้า</TableHead>
-                <TableHead>อีเมล</TableHead>
-                <TableHead>เบอร์โทร</TableHead>
-                <TableHead>ที่อยู่</TableHead> {/* เปลี่ยนจากวันที่สมัครเป็นที่อยู่ */}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customers.map((customer) => (
-                <TableRow key={customer.id}>
-                  <TableCell>{customer.name}</TableCell>
-                  <TableCell>{customer.email}</TableCell>
-                  <TableCell>{customer.phone}</TableCell>
-                  <TableCell>{customer.address || '-'}</TableCell> {/* แสดงที่อยู่ */}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  );
+      if (!res.ok) throw new Error('Failed to update report');
+      
+      await fetchAllData();
+      setEditingReport(null);
+      setShowEditDialog(false);
+      
+      toast({
+        title: "บันทึกสำเร็จ",
+        description: "แก้ไขรายงานเรียบร้อยแล้ว"
+      });
+    } catch (error) {
+      console.error('Error updating report:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถแก้ไขรายงานได้",
+        variant: "destructive"
+      });
+    }
+  };
 
-  // กรองเฉพาะรายการปันผล
-  const dividendTransactions = transactions.filter(t => t.type === 'dividend');
+  const handleDeleteReport = async (reportId: number) => {
+    if (!window.confirm('ต้องการลบรายงานนี้ใช่หรือไม่?')) return;
 
-  // คำนวณยอดรวมปันผล
-  const totalDividend = dividendTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+    try {
+      const res = await fetch(`http://localhost:3001/reports/${reportId}`, {
+        method: 'DELETE'
+      });
 
-  const renderDividendReport = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>รายงานปันผล</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>วันที่</TableHead>
-                <TableHead>รายละเอียด</TableHead>
-                <TableHead>จำนวนเงิน</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {dividendTransactions.map((t, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>{t.date}</TableCell>
-                  <TableCell>{t.description}</TableCell>
-                  <TableCell>฿{t.amount?.toLocaleString()}</TableCell>
-                </TableRow>
-              ))}
-              <TableRow>
-                <TableCell colSpan={2} className="font-bold text-right">รวม</TableCell>
-                <TableCell className="font-bold text-green-600">฿{totalDividend.toLocaleString()}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  );
+      if (!res.ok) throw new Error('Failed to delete report');
+      
+      await fetchAllData();
+      
+      toast({
+        title: "ลบสำเร็จ",
+        description: "ลบรายงานเรียบร้อยแล้ว"
+      });
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถลบรายงานได้",
+        variant: "destructive"
+      });
+    }
+  };
 
-  function getMonthlyReportData() {
-    const monthlyMap: { [period: string]: ReportData } = {};
+  // Calculate summary data with proper number conversion
+  const totalIncome = accounting.reduce((sum, record) => {
+    const income = typeof record.income === 'string' ? parseFloat(record.income) : record.income;
+    return sum + (income || 0);
+  }, 0);
+  
+  const totalExpense = accounting.reduce((sum, record) => {
+    const expense = typeof record.expense === 'string' ? parseFloat(record.expense) : record.expense;
+    return sum + (expense || 0);
+  }, 0);
+  
+  const netProfit = totalIncome - totalExpense;
+  
+  const totalProduction = productions.reduce((sum, product) => {
+    const quantity = typeof product.quantity === 'string' ? parseFloat(product.quantity) : product.quantity;
+    const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
+    return sum + ((quantity || 0) * (price || 0));
+  }, 0);
 
-    transactions.forEach(item => {
-      const period = item.date.slice(0, 7); // 'YYYY-MM'
-      if (!monthlyMap[period]) {
-        monthlyMap[period] = {
-          period,
-          sales: 0,
-          expenses: 0,
-          profit: 0,
-          orders: 0,
-          customers: 0
-        };
-      }
-      if (item.type === 'sale') {
-        monthlyMap[period].sales += item.amount;
-        monthlyMap[period].orders += 1;
-        if (item.customerId) monthlyMap[period].customers += 1;
-      }
-      if (item.type === 'expense') {
-        monthlyMap[period].expenses += item.amount;
-      }
-      monthlyMap[period].profit = monthlyMap[period].sales - monthlyMap[period].expenses;
-    });
+  // Debug calculations
+  console.log('Calculation Debug:', {
+    totalIncome,
+    totalExpense, 
+    netProfit,
+    totalProduction,
+    accountingRecords: accounting.length,
+    productionRecords: productions.length
+  });
 
-    return Object.values(monthlyMap).sort((a, b) => b.period.localeCompare(a.period));
-  }
+  const totalMembers = members.length;
+  const totalShares = members.reduce((sum, member) => {
+    const fundsAmount = typeof member.funds_amount === 'string' ? parseFloat(member.funds_amount) : member.funds_amount;
+    return sum + (fundsAmount || 0);
+  }, 0);
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col space-y-4">
-        <div className="flex flex-row items-center justify-between">
-          <h1 className="text-2xl font-bold">รายงาน</h1>
-          <Button onClick={handleExportReport}>
-            <Download className="mr-2 h-4 w-4" />
-            ดาวน์โหลดรายงาน
+    <div className="p-6 space-y-6">
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">กำลังโหลดข้อมูล...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="text-center py-8">
+          <p className="text-destructive">{error}</p>
+          <Button onClick={fetchAllData} className="mt-4">
+            ลองใหม่อีกครั้ง
           </Button>
         </div>
+      )}
 
-        <div className="flex flex-col md:flex-row md:space-x-4">
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-full md:w-auto">
-              <SelectValue placeholder="เลือกช่วงเวลา" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="daily">รายวัน</SelectItem>
-              <SelectItem value="monthly">รายเดือน</SelectItem>
-              <SelectItem value="yearly">รายปี</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={selectedReport} onValueChange={setSelectedReport}>
-            <SelectTrigger className="w-full md:w-auto">
-              <SelectValue placeholder="เลือกรายงาน" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="financial">รายงานการเงิน</SelectItem>
-              <SelectItem value="sales">รายงานยอดขาย</SelectItem>
-              <SelectItem value="customers">รายงานลูกค้า</SelectItem>
-              <SelectItem value="dividends">รายงานปันผล</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {selectedReport === 'financial' && renderFinancialReport()}
-        {selectedReport === 'sales' && renderSalesReport()}
-        {selectedReport === 'customers' && renderCustomerReport()}
-        {selectedReport === 'dividends' && renderDividendReport()}
+      {/* Main Content */}
+      {!loading && !error && (
+        <>
+          {/* Header */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">รายงาน</h1>
+              <p className="text-muted-foreground">
+                ระบบจัดการรายงานและสรุปข้อมูลกลุ่มวิสาหกิจ
+              </p>
+            </div>
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-primary-hover">
+              <Plus className="mr-2 h-4 w-4" />
+              เพิ่มรายงานใหม่
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>เพิ่มรายงานใหม่</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">หัวข้อรายงาน</Label>
+                <Input
+                  id="title"
+                  value={newReport.title}
+                  onChange={(e) => setNewReport({ ...newReport, title: e.target.value })}
+                  placeholder="หัวข้อรายงาน"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="content">เนื้อหารายงาน</Label>
+                <Textarea
+                  id="content"
+                  value={newReport.content}
+                  onChange={(e) => setNewReport({ ...newReport, content: e.target.value })}
+                  placeholder="เนื้อหารายงาน"
+                  rows={10}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowAddDialog(false)}>ยกเลิก</Button>
+              <Button onClick={handleAddReport}>บันทึก</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">รายได้รวม</p>
+                <p className="text-2xl font-bold text-green-600">
+                  ฿{totalIncome.toLocaleString()}
+                </p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">รายจ่ายรวม</p>
+                <p className="text-2xl font-bold text-red-600">
+                  ฿{totalExpense.toLocaleString()}
+                </p>
+              </div>
+              <TrendingDown className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">กำไรสุทธิ</p>
+                <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  ฿{netProfit.toLocaleString()}
+                </p>
+              </div>
+              <BarChart3 className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">มูลค่าผลผลิต</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  ฿{totalProduction.toLocaleString()}
+                </p>
+              </div>
+              <FileText className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Summary Information */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>สรุปข้อมูลสมาชิก</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span>จำนวนสมาชิกทั้งหมด:</span>
+                <span className="font-medium">{totalMembers} คน</span>
+              </div>
+              <div className="flex justify-between">
+                <span>หุ้นรวมทั้งหมด:</span>
+                <span className="font-medium">{totalShares.toLocaleString()} หุ้น</span>
+              </div>
+              <div className="flex justify-between">
+                <span>มูลค่าหุ้นรวม:</span>
+                <span className="font-medium">฿{(totalShares * 1000).toLocaleString()}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>สรุปข้อมูลผลผลิต</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span>จำนวนรายการผลผลิต:</span>
+                <span className="font-medium">{productions.length} รายการ</span>
+              </div>
+              <div className="flex justify-between">
+                <span>ปริมาณรวม:</span>
+                <span className="font-medium">
+                  {productions.reduce((sum, p) => sum + Number(p.quantity), 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>มูลค่ารวม:</span>
+                <span className="font-medium">฿{totalProduction.toLocaleString()}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Reports List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>รายการรายงาน</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>หัวข้อ</TableHead>
+                <TableHead>เนื้อหา</TableHead>
+                <TableHead>วันที่สร้าง</TableHead>
+                <TableHead className="text-right">การดำเนินการ</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {reports.map((report) => (
+                <TableRow key={report.report_id}>
+                  <TableCell className="font-medium">{report.title}</TableCell>
+                  <TableCell className="max-w-md">
+                    <div className="truncate text-sm text-muted-foreground">
+                      {report.content.length > 100 
+                        ? `${report.content.substring(0, 100)}...` 
+                        : report.content}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(report.created_date).toLocaleDateString('th-TH')}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditReport(report)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 hover:border-red-300"
+                        onClick={() => handleDeleteReport(report.report_id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {reports.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    ยังไม่มีรายงาน
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>แก้ไขรายงาน</DialogTitle>
+          </DialogHeader>
+          {editingReport && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">หัวข้อรายงาน</Label>
+                <Input
+                  id="edit-title"
+                  value={editingReport.title}
+                  onChange={(e) => setEditingReport({ ...editingReport, title: e.target.value })}
+                  placeholder="หัวข้อรายงาน"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-content">เนื้อหารายงาน</Label>
+                <Textarea
+                  id="edit-content"
+                  value={editingReport.content}
+                  onChange={(e) => setEditingReport({ ...editingReport, content: e.target.value })}
+                  placeholder="เนื้อหารายงาน"
+                  rows={10}
+                />
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>ยกเลิก</Button>
+            <Button onClick={handleUpdateReport}>บันทึก</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+        </>
+      )}
     </div>
   );
 };
